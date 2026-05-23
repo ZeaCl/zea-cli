@@ -27,6 +27,14 @@ dns.lookup = function(hostname, options, callback) {
   return originalLookup(hostname, options, callback);
 };
 
+const originalPromisesLookup = dns.promises.lookup;
+dns.promises.lookup = async function(hostname, options) {
+  if (hostname === 'auth.zea.localhost' || hostname.endsWith('.zea.localhost') || hostname === 'zea.localhost') {
+    return { address: '127.0.0.1', family: 4 };
+  }
+  return originalPromisesLookup(hostname, options);
+};
+
 const CONFIG_DIR = path.join(os.homedir(), '.config', 'zea');
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 
