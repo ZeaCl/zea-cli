@@ -10,6 +10,22 @@ import os from 'os';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
+import dns from 'dns';
+
+// Override DNS lookup globally to map *.localhost to 127.0.0.1.
+// This ensures that the CLI resolves auth.zea.localhost (routed by Caddy)
+// even if the host machine has no resolver/hosts configuration for .localhost subdomains.
+const originalLookup = dns.lookup;
+dns.lookup = function(hostname, options, callback) {
+  if (hostname === 'auth.zea.localhost' || hostname.endsWith('.zea.localhost') || hostname === 'zea.localhost') {
+    if (typeof options === 'function') {
+      callback = options;
+      options = {};
+    }
+    return callback(null, '127.0.0.1', 4);
+  }
+  return originalLookup(hostname, options, callback);
+};
 
 const CONFIG_DIR = path.join(os.homedir(), '.config', 'zea');
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');

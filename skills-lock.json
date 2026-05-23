@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "zea": {
+      "source": "ZeaCl/zea-agent-skill",
+      "sourceType": "github",
+      "skillPath": "skills/zea/SKILL.md",
+      "computedHash": "f69e6d0be51c4337d3bada769fe9896bf1a1cd6f9c05719b9375a0ab95d28e70"
+    }
+  }
+}
