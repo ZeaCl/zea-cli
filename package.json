@@ -1,0 +1,18 @@
+{
+  "name": "@zea-ai/thalamus-cli",
+  "version": "1.0.0",
+  "description": "Official CLI and MCP Server for ZEA Thalamus",
+  "type": "module",
+  "main": "src/index.js",
+  "bin": {
+    "thalamus": "./src/index.js"
+  },
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.6.0",
+    "commander": "^12.0.0",
+    "open": "^10.1.0"
+  }
+}
