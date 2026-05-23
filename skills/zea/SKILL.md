@@ -1,8 +1,6 @@
 ---
 name: zea
 description: Authenticate, switch organizations, manage Personal Access Tokens (PATs) and perform platform actions using the ZEA CLI or MCP server.
-allowed-tools:
-  - zea
 ---
 # ZEA Platform Agent Skill
 
