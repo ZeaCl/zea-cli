@@ -232,6 +232,40 @@ org.command('switch <org_id_or_slug>')
     }
   });
 
+org.command('create')
+  .description('Create a new organization')
+  .requiredOption('--name <name>', 'Name of the organization')
+  .requiredOption('--email <email>', 'Owner email address')
+  .option('--plan <plan>', 'Plan type (free, basic, standard, premium, enterprise)', 'free')
+  .action(async (options) => {
+    try {
+      const client = await getClient();
+      const response = await fetch(`${client.apiUrl}/api/organizations`, {
+        method: 'POST',
+        headers: client.headers,
+        body: JSON.stringify({
+          name: options.name,
+          owner_email: options.email,
+          plan_type: options.plan
+        })
+      });
+
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || `HTTP error ${response.status}`);
+      }
+
+      const result = await response.json();
+      const savedOrg = result.data;
+      console.log(`Organization '${savedOrg.name}' created successfully!`);
+      console.log(`ID: ${savedOrg.id}`);
+      console.log(`Owner: ${savedOrg.owner_email}`);
+      console.log(`Plan: ${savedOrg.plan_type}`);
+    } catch (e) {
+      console.error('Error:', e.message);
+    }
+  });
+
 const tokenCmd = program.command('token').description('Personal Access Token (PAT) commands');
 
 tokenCmd.command('create')
@@ -347,6 +381,19 @@ program.command('mcp')
               }
             },
             {
+              name: 'create_organization',
+              description: 'Create a new organization',
+              inputSchema: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string', description: 'Name of the organization' },
+                  owner_email: { type: 'string', description: 'Email address of the owner' },
+                  plan_type: { type: 'string', description: 'Plan type (free, basic, standard, premium, enterprise)' }
+                },
+                required: ['name', 'owner_email']
+              }
+            },
+            {
               name: 'list_tokens',
               description: 'List active Personal Access Tokens (PATs) under the active organization context',
               inputSchema: { type: 'object', properties: {} }
@@ -409,6 +456,25 @@ program.command('mcp')
               await saveConfig(config);
               return {
                 content: [{ type: 'text', text: `Switched active organization to ${match.name} (${match.id})` }]
+              };
+            }
+            case 'create_organization': {
+              const response = await fetch(`${client.apiUrl}/api/organizations`, {
+                method: 'POST',
+                headers: client.headers,
+                body: JSON.stringify({
+                  name: args.name,
+                  owner_email: args.owner_email,
+                  plan_type: args.plan_type || 'free'
+                })
+              });
+              if (!response.ok) {
+                const errData = await response.json();
+                throw new Error(errData.error || `HTTP error ${response.status}`);
+              }
+              const result = await response.json();
+              return {
+                content: [{ type: 'text', text: `Organization created successfully:\nName: ${result.data.name}\nID: ${result.data.id}\nOwner: ${result.data.owner_email}\nPlan: ${result.data.plan_type}` }]
               };
             }
             case 'list_tokens': {

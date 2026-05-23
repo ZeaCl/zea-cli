@@ -34,6 +34,11 @@ Or set the `THALAMUS_PAT` environment variable with a Personal Access Token.
   ```bash
   thalamus org switch <org_slug_or_id>
   ```
+- **Create Organization**: Create a new organization.
+  ```bash
+  thalamus org create --name <org_name> --email <owner_email> [--plan <plan_type>]
+  ```
+  *Example:* `thalamus org create --name "Sudlich Enterprise" --email "ccerda@sudlich.cl" --plan standard`
 - **Create Personal Access Token**: Generate a new PAT under the active organization.
   ```bash
   thalamus token create --name <description>
