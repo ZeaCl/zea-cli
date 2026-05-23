@@ -1,11 +1,11 @@
 {
-  "name": "@zea-ai/thalamus-cli",
+  "name": "@zea-cl/cli",
   "version": "1.0.0",
-  "description": "Official CLI and MCP Server for ZEA Thalamus",
+  "description": "Official CLI and MCP Server for ZEA Platform",
   "type": "module",
   "main": "src/index.js",
   "bin": {
-    "thalamus": "./src/index.js"
+    "zea": "./src/index.js"
   },
   "scripts": {
     "start": "node src/index.js"

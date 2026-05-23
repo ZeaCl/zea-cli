@@ -11,7 +11,7 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 
-const CONFIG_DIR = path.join(os.homedir(), '.config', 'thalamus');
+const CONFIG_DIR = path.join(os.homedir(), '.config', 'zea');
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 
 const program = new Command();
@@ -33,12 +33,12 @@ async function saveConfig(config) {
 
 async function getClient() {
   const config = await loadConfig();
-  const token = process.env.THALAMUS_PAT || process.env.THALAMUS_TOKEN || config.token;
-  const apiUrl = process.env.THALAMUS_API_URL || config.apiUrl || 'http://auth.zea.localhost:4000';
+  const token = process.env.ZEA_PAT || process.env.THALAMUS_PAT || process.env.ZEA_TOKEN || config.token;
+  const apiUrl = process.env.ZEA_API_URL || process.env.THALAMUS_API_URL || config.apiUrl || 'http://auth.zea.localhost:4000';
   const activeOrgId = config.activeOrgId || null;
 
   if (!token) {
-    throw new Error('Not authenticated. Please run "thalamus auth login" or set THALAMUS_PAT.');
+    throw new Error('Not authenticated. Please run "zea auth login" or set ZEA_PAT.');
   }
 
   return {
@@ -54,7 +54,7 @@ async function getClient() {
 
 // Interactive OAuth2 login via local server
 async function handleLogin(options) {
-  const apiUrl = process.env.THALAMUS_API_URL || options.url || 'http://auth.zea.localhost:4000';
+  const apiUrl = process.env.ZEA_API_URL || process.env.THALAMUS_API_URL || options.url || 'http://auth.zea.localhost:4000';
   const port = 4005;
   const redirectUri = `http://localhost:${port}/callback`;
 
@@ -125,7 +125,7 @@ async function handleLogin(options) {
 
         res.writeHead(200, { 'Content-Type': 'text/html' });
         res.end('<h1>Authentication Successful</h1><p>You can close this tab and return to the terminal.</p>');
-        console.log('Successfully authenticated with ZEA Thalamus!');
+        console.log('Successfully authenticated with ZEA Platform!');
         
         setTimeout(() => {
           server.close();
@@ -154,20 +154,20 @@ async function handleLogin(options) {
 
 // CLI implementation
 program
-  .name('thalamus')
-  .description('ZEA Thalamus Agent Skill CLI')
+  .name('zea')
+  .description('ZEA Platform Agent Skill CLI')
   .version('1.0.0');
 
 const auth = program.command('auth').description('Authentication commands');
 
 auth.command('login')
   .description('Login interactively using browser')
-  .option('--url <url>', 'Thalamus API URL')
+  .option('--url <url>', 'ZEA API URL')
   .action(handleLogin);
 
 auth.command('set-token <token>')
   .description('Configure a Personal Access Token (PAT) manually')
-  .option('--url <url>', 'Thalamus API URL')
+  .option('--url <url>', 'ZEA API URL')
   .action(async (token, options) => {
     const config = await loadConfig();
     config.token = token;
@@ -353,7 +353,7 @@ program.command('mcp')
   .action(async () => {
     try {
       const server = new Server({
-        name: 'thalamus-mcp-server',
+        name: 'zea-mcp-server',
         version: '1.0.0'
       }, {
         capabilities: {
