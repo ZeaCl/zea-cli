@@ -22,7 +22,12 @@ dns.lookup = function(hostname, options, callback) {
       callback = options;
       options = {};
     }
-    return callback(null, '127.0.0.1', 4);
+    const isAll = options && options.all;
+    if (isAll) {
+      return callback(null, [{ address: '127.0.0.1', family: 4 }]);
+    } else {
+      return callback(null, '127.0.0.1', 4);
+    }
   }
   return originalLookup(hostname, options, callback);
 };
@@ -30,7 +35,12 @@ dns.lookup = function(hostname, options, callback) {
 const originalPromisesLookup = dns.promises.lookup;
 dns.promises.lookup = async function(hostname, options) {
   if (hostname === 'auth.zea.localhost' || hostname.endsWith('.zea.localhost') || hostname === 'zea.localhost') {
-    return { address: '127.0.0.1', family: 4 };
+    const isAll = options && options.all;
+    if (isAll) {
+      return [{ address: '127.0.0.1', family: 4 }];
+    } else {
+      return { address: '127.0.0.1', family: 4 };
+    }
   }
   return originalPromisesLookup(hostname, options);
 };
