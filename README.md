@@ -45,6 +45,11 @@ Switch the active organization context:
 thalamus org switch <org_slug_or_id>
 ```
 
+Create a new organization:
+```bash
+thalamus org create --name "My Organization" --email "owner@myorg.com" --plan standard
+```
+
 ### 3. Personal Access Tokens (PATs)
 Generate a new PAT:
 ```bash
