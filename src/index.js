@@ -746,20 +746,23 @@ domain.command('grant <user_id> <domain> <role>')
   .description('Grant a domain role to a user in an organization')
   .requiredOption('--org <org_id>', 'Organization ID')
   .option('--scopes <json>', 'JSON array of scopes', '[]')
+  .option('--entity-id <id>', 'Entity ID (e.g. lp_id for investor, team_id for coach)')
   .action(async (userId, domain, role, options) => {
     try {
       const client = await getClient();
       const scopes = JSON.parse(options.scopes);
+      const body = {
+        user_id: userId,
+        organization_id: options.org,
+        domain: domain,
+        role: role,
+        scopes: scopes
+      };
+      if (options.entityId) body.entity_id = options.entityId;
       const response = await fetch(`${client.apiUrl}/api/domains/roles/grant`, {
         method: 'POST',
         headers: client.headers,
-        body: JSON.stringify({
-          user_id: userId,
-          organization_id: options.org,
-          domain: domain,
-          role: role,
-          scopes: scopes
-        })
+        body: JSON.stringify(body)
       });
       if (!response.ok) {
         const errData = await response.json();
