@@ -75,6 +75,7 @@ async function getClient() {
   const ventureUrl = process.env.ZEA_VENTURE_URL || config.ventureUrl || 'http://venture.zea.localhost';
   const sduiUrl = process.env.ZEA_SDUI_URL || config.sduiUrl || 'http://sdui.zea.localhost';
   const appsUrl = process.env.ZEA_APPS_URL || config.appsUrl || 'http://apps.zea.localhost';
+  const gliaUrl = process.env.ZEA_GLIA_URL || config.gliaUrl || 'http://glia.zea.localhost';
 
   if (!token) {
     throw new Error('Not authenticated. Please run "zea auth login" or set ZEA_PAT.');
@@ -86,6 +87,7 @@ async function getClient() {
     ventureUrl,
     sduiUrl,
     appsUrl,
+    gliaUrl,
     token,
     activeOrgId,
     headers: {
@@ -1362,6 +1364,158 @@ sduiCmd.command('dispatch <session_id> <action>')
         delete safeData.jwt;
         console.log(`Data: ${JSON.stringify(safeData).substring(0, 200)}`);
       }
+    } catch (e) {
+      console.error('Error:', e.message);
+    }
+  });
+
+const agentCmd = program.command('agent').description('Agent management (Glia/ReactAgent)');
+
+agentCmd.command('list')
+  .description('List running agents and their assigned skills')
+  .action(async () => {
+    try {
+      const client = await getClient();
+      const response = await fetch(`${client.gliaUrl}/api/agents`, { headers: client.headers });
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || `HTTP error ${response.status}`);
+      }
+      const result = await response.json();
+      const agents = result.agents || [];
+      if (agents.length === 0) { console.log('No agents running.'); return; }
+      console.log('Active Agents:');
+      agents.forEach(a => console.log(`  ${a.name}: ${a.status} | skills: [${(a.skills||[]).join(', ')}] | users: ${a.user_count || 0}`));
+    } catch (e) {
+      console.error('Error:', e.message);
+    }
+  });
+
+agentCmd.command('create <name>')
+  .description('Create a new agent')
+  .option('--skills <list>', 'Comma-separated skill names')
+  .action(async (name, options) => {
+    try {
+      const client = await getClient();
+      const skills = options.skills ? options.skills.split(',').map(s => s.trim()) : [];
+      const response = await fetch(`${client.gliaUrl}/api/agents`, {
+        method: 'POST',
+        headers: client.headers,
+        body: JSON.stringify({ name, skills })
+      });
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || `HTTP error ${response.status}`);
+      }
+      const result = await response.json();
+      console.log(`Agent '${result.name}' created [${result.status}]`);
+      if (result.skills?.length) console.log(`  Skills: ${result.skills.join(', ')}`);
+    } catch (e) {
+      console.error('Error:', e.message);
+    }
+  });
+
+agentCmd.command('assign <name>')
+  .description('Assign a skill to a running agent (hot-reload)')
+  .requiredOption('--skill <skill>', 'Skill name to assign')
+  .action(async (name, options) => {
+    try {
+      const client = await getClient();
+      const response = await fetch(`${client.gliaUrl}/api/agents/${encodeURIComponent(name)}/skills`, {
+        method: 'POST',
+        headers: client.headers,
+        body: JSON.stringify({ skill: options.skill })
+      });
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || `HTTP error ${response.status}`);
+      }
+      const result = await response.json();
+      console.log(`Skill '${options.skill}' assigned to agent '${name}' [hot-reload]`);
+      console.log(`  Active skills: ${(result.skills||[]).join(', ')}`);
+    } catch (e) {
+      console.error('Error:', e.message);
+    }
+  });
+
+agentCmd.command('remove <name>')
+  .description('Remove a skill from a running agent')
+  .requiredOption('--skill <skill>', 'Skill name to remove')
+  .action(async (name, options) => {
+    try {
+      const client = await getClient();
+      const response = await fetch(`${client.gliaUrl}/api/agents/${encodeURIComponent(name)}/skills/${encodeURIComponent(options.skill)}`, {
+        method: 'DELETE',
+        headers: client.headers
+      });
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || `HTTP error ${response.status}`);
+      }
+      const result = await response.json();
+      console.log(`Skill '${options.skill}' removed from agent '${name}'`);
+      console.log(`  Active skills: ${(result.skills||[]).join(', ')}`);
+    } catch (e) {
+      console.error('Error:', e.message);
+    }
+  });
+
+agentCmd.command('stop <name>')
+  .description('Stop an agent')
+  .action(async (name) => {
+    try {
+      const client = await getClient();
+      const response = await fetch(`${client.gliaUrl}/api/agents/${encodeURIComponent(name)}`, {
+        method: 'DELETE',
+        headers: client.headers
+      });
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || `HTTP error ${response.status}`);
+      }
+      console.log(`Agent '${name}' stopped.`);
+    } catch (e) {
+      console.error('Error:', e.message);
+    }
+  });
+
+const skillCmd = program.command('skill').description('Skill management');
+
+skillCmd.command('list')
+  .description('List installed skills')
+  .action(async () => {
+    try {
+      const client = await getClient();
+      const response = await fetch(`${client.gliaUrl}/api/skills`, { headers: client.headers });
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || `HTTP error ${response.status}`);
+      }
+      const result = await response.json();
+      const skills = result.skills || [];
+      if (skills.length === 0) { console.log('No skills installed.'); return; }
+      console.log('Installed Skills:');
+      skills.forEach(s => console.log(`  ${s.name}: ${s.description || ''} (${s.tools_count || 0} tools)`));
+    } catch (e) {
+      console.error('Error:', e.message);
+    }
+  });
+
+skillCmd.command('reload')
+  .description('Force reload all skills (hot-reload)')
+  .action(async () => {
+    try {
+      const client = await getClient();
+      const response = await fetch(`${client.gliaUrl}/api/skills/reload`, {
+        method: 'POST',
+        headers: client.headers
+      });
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || `HTTP error ${response.status}`);
+      }
+      const result = await response.json();
+      console.log(`Skills reloaded: ${result.count} skills loaded`);
     } catch (e) {
       console.error('Error:', e.message);
     }
