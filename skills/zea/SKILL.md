@@ -1,69 +1,259 @@
 ---
 name: zea
-description: Authenticate, switch organizations, manage Personal Access Tokens (PATs) and perform platform actions using the ZEA CLI or MCP server.
+description: ZEA Platform — AI-first infrastructure for coding agents. Use this skill to access all ZEA domains (stitch, venture, sdui, memory, agent, doctor, innovation, ops).
 ---
-# ZEA Platform Agent Skill
 
-This skill allows AI agents to interact with the ZEA Platform Authentication and Identity service, enabling authentication, organization switching, and token management.
+# ZEA Platform — Agent Skill
 
-## Prerequisites
-Ensure the `zea` CLI is installed globally.
-If not authenticated, run:
+This is the **umbrella skill** for the entire ZEA Platform. It documents all available CLI commands, the Lego-piece architecture, the layer-by-layer doctor methodology, and how other agentic systems can integrate.
+
+## Architecture — Lego Pieces
+
+Each domain is a standalone skill+CLI piece. Combine them as needed.
+
+| Domain | CLI | Skill File | Description |
+|--------|-----|------------|-------------|
+| **Stitch** | `zea stitch` | stitch/SKILL.md | Import designs from Google Stitch (MCP) |
+| **Venture** | `zea venture` | venture/SKILL.md | Fund management, capital calls, LPs |
+| **SDUI** | `zea sdui` | sdui/SKILL.md | Server-Driven UI sessions |
+| **Memory** | `zea memory` | memory/SKILL.md | Persistent memory per app (agent learning) |
+| **Agent** | `zea agent` | agent/SKILL.md | Manage Glia agents (create, assign, stop) |
+| **Ops** | `zea ops` | ops/SKILL.md | Docker, migrations, deploy |
+| **Doctor** | `zea doctor` | doctor/SKILL.md | Health check layer by layer |
+| **Innovation** | `zea innovation` | innovation/SKILL.md | Customer discovery methodology |
+| **Auth** | `zea auth` | — | Login, set-token |
+| **Org** | `zea org` | — | Organization management |
+| **Token** | `zea token` | — | Personal Access Tokens |
+| **App** | `zea app` | — | App manifest registry |
+| **Skill** | `zea skill` | — | Skill management (list, reload) |
+| **Sensor** | `zea sensor` | — | Audio transcription & analysis |
+
+## Quick Reference — All CLI Commands
+
+### 🔐 Authentication
 ```bash
-zea auth login
+zea auth login                      # Interactive browser login
+zea auth login --email user@... --password ...  # Direct login
+zea auth set-token <token>          # Set PAT manually
 ```
-Or set the `ZEA_PAT` environment variable with a Personal Access Token.
 
-## Available Commands
+### 🏢 Organizations
+```bash
+zea org list                        # List your orgs
+zea org switch <id_or_slug>         # Set active org
+zea org create                       # Create new org
+```
 
-- **Interactive Login**: Open browser to authenticate with ZEA Platform.
-  ```bash
-  zea auth login
-  ```
-- **Set PAT token manually**: Authenticate by saving a pre-generated Personal Access Token.
-  ```bash
-  zea auth set-token <token_value>
-  ```
-- **List Organizations**: Show all organizations the authenticated user belongs to.
-  ```bash
-  zea org list
-  ```
-- **Switch Organization Context**: Set the active organization context for subsequent commands.
-  ```bash
-  zea org switch <org_slug_or_id>
-  ```
-- **Create Organization**: Create a new organization.
-  ```bash
-  zea org create --name <org_name> --email <owner_email> [--plan <plan_type>]
-  ```
-  *Example:* `zea org create --name "Sudlich Enterprise" --email "ccerda@sudlich.cl" --plan standard`
-- **Create Personal Access Token**: Generate a new PAT under the active organization.
-  ```bash
-  zea token create --name <description>
-  ```
-  *Example:* `zea token create --name "Cortex Local CLI"`
-- **List Tokens**: Show all active Personal Access Tokens.
-  ```bash
-  zea token list
-  ```
-- **Revoke Token**: Deactivate a Personal Access Token by its ID.
-  ```bash
-  zea token revoke <token_id>
-  ```
+### 🎨 Stitch (Design Import)
+```bash
+zea stitch list-screens --app <app_id>
+zea stitch import-screen --app <app_id> --screen-id <sid> --state <name> --intent <name>
+zea stitch status --app <app_id>
+```
 
-## MCP Server Integration
-To configure ZEA Platform as a Model Context Protocol (MCP) server in your agent configuration (e.g., `mcp_config.json`), add:
-```json
-{
-  "mcpServers": {
-    "zea": {
-      "command": "zea",
-      "args": ["mcp"],
-      "env": {
-        "ZEA_API_URL": "http://auth.zea.localhost:4000",
-        "ZEA_PAT": "your_personal_access_token_here"
-      }
-    }
-  }
+### 🧠 Memory (Agent Learning)
+```bash
+zea memory init --app <app_id> --stitch-project <project_id>
+zea memory get --app <app_id> --key <path>
+zea memory set --app <app_id> --key <path> --value <json>
+zea memory list --app <app_id>
+```
+
+### 💰 Venture (Fund Management)
+```bash
+zea venture fund list
+zea venture fund show <fund_id>
+zea venture capital-call list
+zea venture capital-call show <call_id>
+zea venture capital-call send <call_id>
+zea venture investor list
+```
+
+### 📱 Apps
+```bash
+zea app list
+zea app show <app_id>
+zea app register <manifest.yaml>
+```
+
+### 🖥️ SDUI
+```bash
+zea sdui start <app_id>
+zea sdui dispatch <session_id> <action> [payload]
+```
+
+### 🤖 Agents
+```bash
+zea agent list
+zea agent create <name> [--mission <mission>]
+zea agent assign <name> [--skill <skill>]
+zea agent stop <name>
+```
+
+### 🛠️ Skills
+```bash
+zea skill list
+zea skill reload
+```
+
+### 🩺 Doctor (Health Check)
+```bash
+zea doctor run                      # All 6 layers
+zea doctor check api                # Layer 1: Connectivity
+zea doctor check auth               # Layer 2: Authentication
+zea doctor check venture            # Layer 3: Data endpoints
+zea doctor check stitch             # Layer 4: Stitch MCP
+zea doctor check glia               # Layer 5: LLM + Tools
+zea doctor check tools              # Layer 6: Skill execution
+```
+
+### 💡 Innovation (Customer Discovery)
+```bash
+zea innovation start --sector "Construction"
+zea innovation discover --sector "..." --role "..."
+zea innovation analyze --file "..."
+zea innovation simulate --role "CTO"
+zea innovation propose
+zea innovation opening --name "..." --company "..."
+zea innovation register --company "..." --contact "..."
+```
+
+## Doctor — Layer-by-Layer Testing Methodology
+
+When something breaks, test from bottom up:
+
+### Layer 1 — API Connectivity
+```bash
+# Can the agent reach external APIs?
+wget -qO- http://venture-api:4081/health
+wget -qO- http://auth.zea.localhost/.well-known/jwks.json
+```
+✅ Success: `{"status":"ok"}`, JWKS keys returned
+
+### Layer 2 — Authentication
+```bash
+# Is the token valid? Can we decode it?
+zea doctor check auth
+```
+✅ Success: Token decodes, exp > now, Venture API returns 200
+
+### Layer 3 — Venture API Data
+```bash
+# Do endpoints return real data?
+curl -s http://venture-api.zea.localhost/gp/dashboard -H "Authorization: Bearer $TOKEN"
+```
+✅ Success: metrics object with active_funds, aum, pending_calls
+
+### Layer 4 — Stitch MCP
+```bash
+# Can we list screens from Stitch?
+zea stitch list-screens --app <app_id>
+```
+✅ Success: screens array with titles and IDs
+
+### Layer 5 — Glia LLM + Tools
+```bash
+# Are agents running? Are tools loaded?
+curl -s http://glia.zea.localhost/api/skills -H "Authorization: Bearer $TOKEN"
+```
+✅ Success: skills > 0, tools_count > 0
+
+### Layer 6 — Skill Tools Execution
+```bash
+# Can the LLM call tools? Do tools execute?
+# Test directly from the chat or via:
+wget -qO- --header="Authorization: Bearer $ZEA_TOKEN" http://venture-api:4081/gp/capital-calls
+```
+✅ Success: Returns JSON with capital calls
+
+## Common Issues & Fixes
+
+| Symptom | Root Cause | Fix |
+|---------|-----------|-----|
+| `Tools: 0` in logs | YAML parsing failed | Check SKILL.md frontmatter: use quoted strings, `>-` for multi-line |
+| `Tool not called` | Model doesn't support function calling | Use `deepseek-v4-pro`, try `tool_choice: "required"` |
+| `401 Unauthorized` | Missing auth header | Add `--header="Authorization: Bearer $ZEA_TOKEN"` |
+| `500 Internal` | JWKS fetch failed | Check thalumus:4000 reachable from container |
+| `Empty response` | poll_for_response too early | Added `has_tool_call?` check to skip incomplete messages |
+| `wget: bad address` | DNS not resolving | Use Docker internal: `venture-api:4081` not `.localhost` |
+| `Todos los proveedores fallaron` | DeepSeek key invalid | Check `DEEPSEEK_API_KEYS` env var |
+| `Logger.error undefined` | Missing `require Logger` | Added in adapter |
+
+## Integration for Other Agentic Systems
+
+### Via bash (any agent)
+```bash
+export ZEA_TOKEN="<jwt>"
+export STITCH_KEY="<google-api-key>"
+
+# Venture API
+wget -qO- --header="Authorization: Bearer $ZEA_TOKEN" http://venture-api.zea.localhost/gp/dashboard
+
+# Stitch MCP
+curl -s -X POST https://stitch.googleapis.com/mcp \
+  -H "Content-Type: application/json" \
+  -H "X-Goog-Api-Key: $STITCH_KEY" \
+  -d '{"jsonrpc":"2.0","method":"tools/call","params":{"name":"list_screens","arguments":{"projectId":"PROJECT_ID"}},"id":1}'
+```
+
+### Via ZEA CLI (opencode, Claude)
+```bash
+# Install
+npm install -g zea-agent-skill
+
+# Authenticate
+zea auth login --email user@... --password ...
+
+# Use any domain
+zea venture capital-call list
+zea stitch import-screen --app myapp --screen-id xyz --state dashboard --intent back_to_dashboard
+zea memory init --app myapp --stitch-project 12345
+```
+
+### Via Glia (ReactAgent)
+Place SKILL.md files in `~/.zea/agents/{mission}/skills/{domain}/SKILL.md`
+Restart Glia or call `POST /api/skills/reload`
+
+### Via REST API (any system)
+```
+GET  /api/apps/:id/manifest          → App manifest
+POST /api/apps                       → Register/update app
+POST /api/sessions                   → Start SDUI session
+POST /api/sessions/:id/dispatch      → Dispatch intent
+GET  /api/skills                     → List loaded skills
+POST /api/skills/reload              → Reload skills from disk
+POST /api/agents                     → Create agent
+POST /api/agents/:name/message       → Send message to agent
+```
+
+## Plugin System
+
+Custom client commands are auto-discovered from `~/.zea/cli/plugins/<client>/index.js`:
+
+```js
+// ~/.zea/cli/plugins/sudlich/index.js
+export function register(program) {
+  const cmd = program.command('sudlich')
+    .description('Südlich Ventures custom commands');
+  cmd.command('approve-call').action(async () => { /* ... */ });
 }
+```
+
+## Files Structure
+```
+~/.zea/
+├── skills/             ← Agent skills (Lego pieces)
+│   ├── zea/            ← Umbrella (this file)
+│   ├── stitch/         ← zea stitch
+│   ├── venture/        ← zea venture
+│   ├── sdui/           ← zea sdui
+│   ├── memory/         ← zea memory
+│   ├── agent/          ← zea agent
+│   ├── ops/            ← zea ops
+│   ├── doctor/         ← zea doctor
+│   ├── innovation/     ← zea innovation
+│   └── <client>/       ← Client-specific skills
+├── agents/             ← Glia missions + skills
+├── memory/             ← Agent memory per app
+└── cli/plugins/        ← Auto-discovered CLI plugins
 ```
