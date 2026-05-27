@@ -2,6 +2,7 @@ import { getClient, loadConfig } from '../client.js';
 import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
+import { withLearning } from '../utils/learning.js';
 
 const MEMORY_DIR = path.join(os.homedir(), '.zea', 'memory');
 
@@ -78,6 +79,7 @@ export function register(program) {
           process.exit(1);
         }
         const client = await getClient();
+        await withLearning(opts.app, 'design.import-screen', async () => {
         const mem = await readMemory(opts.app, 'stitch.json');
         const projectId = mem?.project_id;
         if (!projectId) {
@@ -168,6 +170,8 @@ export function register(program) {
         console.log(`   HTML:    ${contentHtml.length} bytes`);
         console.log(`   Memory:  updated`);
 
+        }, { screen_id: opts.screenId, state: opts.state, intent: opts.intent });
+
       } catch (e) {
         console.error('Error:', e.message);
       }
@@ -212,6 +216,7 @@ export function register(program) {
     .action(async (opts) => {
       try {
         const client = await getClient();
+        await withLearning(opts.app, 'design.update-design', async () => {
         const mResp = await fetch(`${client.appsUrl}/api/apps/${opts.app}/manifest`, {
           headers: client.headers
         });
@@ -253,6 +258,7 @@ export function register(program) {
 
         console.log(`✅ Design system updated: ${opts.token} = ${opts.value}`);
         console.log(`   App: ${opts.app}`);
+        }, { token: opts.token, value: opts.value });
       } catch (e) {
         console.error('Error:', e.message);
       }
