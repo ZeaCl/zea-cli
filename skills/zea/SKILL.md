@@ -99,6 +99,9 @@ zea app register <manifest.yaml>
 ```bash
 zea sdui start <app_id>
 zea sdui dispatch <session_id> <action> [payload]
+zea sdui screens <app_id>
+zea sdui screen <app_id> <state> [--save]
+zea sdui manifest <app_id>
 ```
 
 ### 🤖 Agents
