@@ -1,4 +1,5 @@
 import { getClient } from '../client.js';
+import { withLearning } from '../utils/learning.js';
 
 export function register(program) {
   const shellCmd = program.command('shell')
@@ -11,10 +12,14 @@ export function register(program) {
     .action(async (opts) => {
       try {
         const client = await getClient();
+        await withLearning(opts.app, 'shell.update-sidebar', async () => {
         const items = JSON.parse(opts.items);
 
         const mResp = await fetch(`${client.appsUrl}/api/apps/${opts.app}/manifest`, {
           headers: client.headers
+
+(Showing lines 12-19 of 121. Use offset=20 to continue.)
+
         });
         if (!mResp.ok) throw new Error(`Manifest fetch failed: ${mResp.status}`);
         const manifest = await mResp.json();
@@ -45,6 +50,7 @@ export function register(program) {
         for (const item of items) {
           console.log(`   ${item.icon} ${item.label} → ${item.action?.value || item.action?.type || '?'}`);
         }
+        }, { items_count: items.length });
       } catch (e) {
         console.error('Error:', e.message);
       }
@@ -58,6 +64,7 @@ export function register(program) {
     .action(async (opts) => {
       try {
         const client = await getClient();
+        await withLearning(opts.app, 'shell.update-chat', async () => {
         const value = JSON.parse(opts.value);
 
         const mResp = await fetch(`${client.appsUrl}/api/apps/${opts.app}/manifest`, {
@@ -95,6 +102,7 @@ export function register(program) {
         if (!uResp.ok) throw new Error(`Update failed: ${uResp.status}`);
 
         console.log(`✅ Chat updated: ${opts.key} = ${JSON.stringify(value)}`);
+        }, { key: opts.key, value: opts.value });
       } catch (e) {
         console.error('Error:', e.message);
       }
