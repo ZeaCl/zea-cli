@@ -213,13 +213,18 @@ export function register(program) {
     .requiredOption('--app <id>', 'ZEA App ID')
     .requiredOption('--token <path>', 'Token path (e.g. colors.primary, typography.h1_size)')
     .requiredOption('--value <val>', 'New value')
+    .option('--experiment <name>', 'Experiment branch name (safe mode)')
     .action(async (opts) => {
       try {
         const client = await getClient();
         await withLearning(opts.app, 'design.update-design', async () => {
-        const mResp = await fetch(`${client.appsUrl}/api/apps/${opts.app}/manifest`, {
-          headers: client.headers
-        });
+
+        // If experiment, use experiment URL
+        const manifestUrl = opts.experiment
+          ? `${client.appsUrl}/api/apps/${opts.app}/experiments/${opts.experiment}`
+          : `${client.appsUrl}/api/apps/${opts.app}/manifest`;
+
+        const mResp = await fetch(manifestUrl, { headers: client.headers });
         if (!mResp.ok) throw new Error(`Manifest fetch failed: ${mResp.status}`);
         const manifest = await mResp.json();
 
@@ -246,18 +251,23 @@ export function register(program) {
           design_system: manifest.design_system || {}
         };
 
-        const uResp = await fetch(`${client.appsUrl}/api/apps`, {
-          method: 'POST',
+        const uploadUrl = opts.experiment
+          ? `${client.appsUrl}/api/apps/${opts.app}/experiments/${opts.experiment}`
+          : `${client.appsUrl}/api/apps`;
+
+        const uResp = await fetch(uploadUrl, {
+          method: opts.experiment ? 'PUT' : 'POST',
           headers: client.headers,
-          body: JSON.stringify(payload)
+          body: JSON.stringify(opts.experiment ? { manifest } : payload)
         });
         if (!uResp.ok) {
           const err = await uResp.text();
           throw new Error(`Update failed: ${uResp.status} - ${err.substring(0, 200)}`);
         }
 
+        const target = opts.experiment ? `experiment '${opts.experiment}'` : `app ${opts.app}`;
         console.log(`✅ Design system updated: ${opts.token} = ${opts.value}`);
-        console.log(`   App: ${opts.app}`);
+        console.log(`   Target: ${target}`);
         }, { token: opts.token, value: opts.value });
       } catch (e) {
         console.error('Error:', e.message);
