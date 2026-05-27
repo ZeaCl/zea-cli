@@ -17,9 +17,6 @@ export function register(program) {
 
         const mResp = await fetch(`${client.appsUrl}/api/apps/${opts.app}/manifest`, {
           headers: client.headers
-
-(Showing lines 12-19 of 121. Use offset=20 to continue.)
-
         });
         if (!mResp.ok) throw new Error(`Manifest fetch failed: ${mResp.status}`);
         const manifest = await mResp.json();
