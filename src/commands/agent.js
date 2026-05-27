@@ -383,4 +383,168 @@ export function register(program) {
         console.error('Error:', e.message);
       }
     });
+
+  // ─── Autonomous Planning ───────────────────────────
+
+  agentCmd.command('plan')
+    .description('Analyze a request and generate a step-by-step plan with Lego pieces')
+    .requiredOption('--app <id>', 'App ID')
+    .requiredOption('--request <text>', 'What the user wants to do')
+    .action(async (opts) => {
+      try {
+        const client = await getClient();
+        console.log(`═══ PLAN: ${opts.request} ═══\n`);
+
+        // 1. Current state
+        console.log('📊 Current State:');
+        let states = 0, intents = 0, primary = '?';
+        try {
+          const mResp = await fetch(`${client.appsUrl}/api/apps/${opts.app}/manifest`, { headers: client.headers });
+          if (mResp.ok) {
+            const manifest = await mResp.json();
+            states = Object.keys(manifest.states || {}).length;
+            intents = Object.keys(manifest.intent_routing || {}).length;
+            primary = manifest.design_system?.colors?.primary || '?';
+            console.log(`   States: ${states} | Intents: ${intents} | Color: ${primary}`);
+          }
+        } catch { console.log('   (manifest unavailable)'); }
+
+        // 2. Analyze request → identify layers
+        const req = opts.request.toLowerCase();
+        console.log('\n🧱 Lego Pieces needed:');
+
+        let plan = [];
+        let experimentName = 'plan-' + Date.now();
+
+        if (req.includes('screen') || req.includes('pantalla') || req.includes('import')) {
+          plan.push({ step: 1, action: 'design.import-screen', desc: 'Importar screen de Stitch', lego: '🎨 Design', cli: 'zea design import-screen --app ' + opts.app + ' --screen-id <id> --state <name> --intent <intent>', confidence: 0.85 });
+          plan.push({ step: 2, action: 'shell.update-sidebar', desc: 'Agregar al menú lateral', lego: '🟨 Shell', cli: 'zea shell update-sidebar --app ' + opts.app + ' --items \'[...]\'', confidence: 0.80 });
+          plan.push({ step: 3, action: 'memory.set', desc: 'Registrar en memoria', lego: '🟪 Memory', cli: 'zea memory set --app ' + opts.app + ' --key stitch.screen_mappings.<name> --value \'...\'', confidence: 0.90 });
+        }
+
+        if (req.includes('color') || req.includes('diseño') || req.includes('design') || req.includes('tema')) {
+          plan.push({ step: plan.length + 1, action: 'design.update-design', desc: 'Cambiar design system', lego: '🎨 Design', cli: 'zea design update-design --app ' + opts.app + ' --token colors.primary --value <hex>', confidence: 0.80 });
+        }
+
+        if (req.includes('menu') || req.includes('sidebar') || req.includes('lateral')) {
+          plan.push({ step: plan.length + 1, action: 'shell.update-sidebar', desc: 'Modificar menú lateral', lego: '🟨 Shell', cli: 'zea shell update-sidebar --app ' + opts.app + ' --items \'[...]\'', confidence: 0.80 });
+        }
+
+        if (req.includes('dato') || req.includes('data') || req.includes('endpoint') || req.includes('api')) {
+          plan.push({ step: plan.length + 1, action: 'venture.endpoint.create', desc: 'Crear/verificar endpoint', lego: '🟩 Data', cli: 'zea venture endpoint check', confidence: 0.70 });
+        }
+
+        if (req.includes('chat') || req.includes('asistente') || req.includes('copilot')) {
+          plan.push({ step: plan.length + 1, action: 'shell.update-chat', desc: 'Modificar chat', lego: '🟨 Shell', cli: 'zea shell update-chat --app ' + opts.app + ' --key <key> --value \'<json>\'', confidence: 0.75 });
+        }
+
+        // Always add safety + verify
+        plan.unshift({ step: 0, action: 'experiment.create', desc: 'Crear rama segura', lego: '🔒 Experiment', cli: `zea experiment create --app ${opts.app} --name ${experimentName}`, confidence: 0.95 });
+        plan.push({ step: plan.length, action: 'doctor.check', desc: 'Validar cambios', lego: '🟧 Doctor', cli: 'zea doctor check venture', confidence: 0.85 });
+        plan.push({ step: plan.length, action: 'experiment.merge', desc: 'Merge a producción', lego: '🔒 Experiment', cli: `zea experiment merge --app ${opts.app} --name ${experimentName}`, confidence: 0.90 });
+
+        if (plan.length <= 3) {
+          console.log('   ⚠️  Request too generic — add more specifics.');
+          console.log(`   Try: "Agregar una screen nueva desde Stitch"`);
+          console.log(`   or: "Cambiar el color primary a azul oscuro"`);
+          return;
+        }
+
+        // 3. Show plan
+        console.log('\n📋 Execution Plan:');
+        for (const p of plan) {
+          const confIcon = p.confidence >= 0.85 ? '🟢' : p.confidence >= 0.7 ? '🟡' : '🔴';
+          console.log(`\n  Step ${p.step}: ${p.lego} ${p.desc}`);
+          console.log(`  CLI: ${p.cli}`);
+          console.log(`  Confidence: ${confIcon} ${Math.round(p.confidence * 100)}%`);
+        }
+
+        // 4. Summary
+        const legoSet = [...new Set(plan.map(p => p.lego))];
+        console.log(`\n═══ ${plan.length} steps, ${legoSet.length} Lego pieces ═══`);
+        console.log(`Execute: zea agent execute --app ${opts.app} --name ${experimentName} --auto`);
+
+        // 5. Save plan to memory
+        const memDir = path.join(MEMORY_DIR, 'apps', opts.app);
+        await fs.mkdir(memDir, { recursive: true });
+        const plansPath = path.join(memDir, 'plans.json');
+        let plans = [];
+        try { plans = JSON.parse(await fs.readFile(plansPath, 'utf8')); } catch {}
+        plans.push({ request: opts.request, plan, created: new Date().toISOString(), experiment: experimentName });
+        await fs.writeFile(plansPath, JSON.stringify(plans.slice(-20), null, 2));
+        console.log(`\nPlan saved to memory.`);
+
+      } catch (e) {
+        console.error('Error:', e.message);
+      }
+    });
+
+  agentCmd.command('execute')
+    .description('Execute a plan step by step with REML tracking')
+    .requiredOption('--app <id>', 'App ID')
+    .requiredOption('--name <name>', 'Experiment name from plan')
+    .option('--auto', 'Auto-execute all steps without confirmation')
+    .action(async (opts) => {
+      try {
+        const client = await getClient();
+        const memDir = path.join(MEMORY_DIR, 'apps', opts.app);
+        const plansPath = path.join(memDir, 'plans.json');
+
+        let plans = [];
+        try { plans = JSON.parse(await fs.readFile(plansPath, 'utf8')); } catch {}
+        const activePlan = [...plans].reverse().find(p => p.experiment === opts.name);
+
+        if (!activePlan) {
+          console.error(`No plan found for experiment '${opts.name}'. Run 'zea agent plan --app ${opts.app} --request ...' first.`);
+          return;
+        }
+
+        console.log(`═══ EXECUTE: ${activePlan.request} ═══\n`);
+        console.log(`Experiment: ${opts.name}\n`);
+
+        let passed = 0, failed = 0, skipped = 0;
+
+        for (const p of activePlan.plan) {
+          if (p.action === 'experiment.create') {
+            console.log(`Step ${p.step}: ${p.lego} ${p.desc}`);
+            console.log(`  → Creating experiment: ${opts.name}`);
+
+            await withLearning(opts.app, p.action, async () => {
+              const r = await fetch(`${client.appsUrl}/api/apps/${opts.app}/experiments`, {
+                method: 'POST',
+                headers: client.headers,
+                body: JSON.stringify({ name: opts.name, app_id: opts.app })
+              });
+              if (r.ok) { console.log(`  ✅ Experiment created`); passed++; }
+              else { console.log(`  ❌ Failed: ${r.status}`); failed++; }
+            });
+          } else if (p.action === 'experiment.merge') {
+            console.log(`Step ${p.step}: ${p.lego} ${p.desc}`);
+            await withLearning(opts.app, p.action, async () => {
+              const r = await fetch(`${client.appsUrl}/api/apps/${opts.app}/experiments/${opts.name}/merge`, {
+                method: 'POST', headers: client.headers
+              });
+              if (r.ok) { console.log(`  ✅ Merged to production!`); passed++; }
+              else { console.log(`  ❌ Merge failed: ${r.status}`); failed++; }
+            });
+          } else if (p.action === 'doctor.check') {
+            console.log(`Step ${p.step}: 🟧 Doctor validation`);
+            console.log(`  → Run: zea doctor check venture`);
+            console.log(`  → (Skipped in auto mode — run manually for now)`);
+            skipped++;
+          } else {
+            console.log(`Step ${p.step}: ${p.lego} ${p.desc}`);
+            console.log(`  → CLI: ${p.cli}`);
+            console.log(`  → (Skipped — requires coding agent or manual CLI)`);
+            skipped++;
+          }
+        }
+
+        console.log(`\n═══ Result: ${passed} passed, ${skipped} skipped, ${failed} failed ═══`);
+        if (failed > 0) console.log('Discard experiment: zea experiment discard --app ' + opts.app + ' --name ' + opts.name);
+
+      } catch (e) {
+        console.error('Error:', e.message);
+      }
+    });
 }

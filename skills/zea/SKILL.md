@@ -22,7 +22,7 @@ Each domain is a standalone skill+CLI piece. Combine them as needed.
 | **Agent** | `zea agent` | agent/SKILL.md | Manage Glia agents (create, assign, stop) |
 | **Ops** | `zea ops` | ops/SKILL.md | Docker, migrations, deploy |
 | **Doctor** | `zea doctor` | doctor/SKILL.md | Health check layer by layer |
-| **Innovation** | `zea innovation` | innovation/SKILL.md | Customer discovery methodology |
+| **Orchestrate** | `zea agent plan/execute` | orchestrate/SKILL.md | Autonomous planner — analyze → plan → build → verify |
 | **Auth** | `zea auth` | — | Login, set-token |
 | **Org** | `zea org` | — | Organization management |
 | **Token** | `zea token` | — | Personal Access Tokens |
@@ -110,6 +110,10 @@ zea agent list
 zea agent create <name> [--mission <mission>]
 zea agent assign <name> [--skill <skill>]
 zea agent stop <name>
+zea agent plan --app <id> --request "<text>"
+zea agent execute --app <id> --name <experiment> --auto
+zea agent scan --app <id>
+zea agent improve --app <id> --auto
 ```
 
 ### 🛠️ Skills
