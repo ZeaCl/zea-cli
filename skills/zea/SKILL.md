@@ -131,10 +131,12 @@ zea doctor check tools              # Layer 6: Skill execution
 
 ### 🎙️ Sensor (Audio + AI)
 ```bash
-zea sensor transcribe <files...>    # Transcribe audio files to text (MLX Whisper)
-zea sensor events                   # List sensor events
-zea sensor status <event_id>        # Get event status and result
-zea sensor analyze <event_id>       # Analyze event with Glia (DeepSeek)
+zea sensor transcribe <files...> --app <id>
+zea sensor events --app <id> [--source] [--status]
+zea sensor status <event_id> --app <id>
+zea sensor analyze <event_id> --app <id>
+zea sensor listen --app <id> [--auto-process]
+zea sensor report <event_id> --app <id>
 ```
 
 ### 💡 Innovation (Customer Discovery)

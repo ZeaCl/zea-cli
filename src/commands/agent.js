@@ -262,7 +262,38 @@ export function register(program) {
           if (count === 0) console.log('   ✅ All actions healthy');
         }
 
-        console.log('\n═══ ' + issues.length + ' issues found ═══');
+        // ── 4. Sensor Events ──
+        try {
+          const sResp = await fetch(client.sensorUrl + '/api/sensor/events?status=ingested&limit=20', { headers: client.headers });
+          if (sResp.ok) {
+            const sData = await sResp.json();
+            const sEvents = sData.data || sData.events || [];
+            console.log('\n📡 Sensor Events: ' + sEvents.length + ' pending');
+            if (sEvents.length > 0) {
+              for (const ev of sEvents) {
+                const source = ev.source || 'unknown';
+                const id = (ev.id || '').substring(0, 12);
+                console.log('   ⬜ ' + id + '... (' + source + ') — needs processing');
+                issues.push({ type: 'sensor_pending', event_id: ev.id, source });
+              }
+            } else {
+              console.log('   ✅ No pending events');
+            }
+            const fResp = await fetch(client.sensorUrl + '/api/sensor/events?status=failed&limit=10', { headers: client.headers });
+            if (fResp.ok) {
+              const fData = await fResp.json();
+              const fEvents = fData.data || fData.events || [];
+              if (fEvents.length > 0) {
+                console.log('   🔴 ' + fEvents.length + ' failed events (retry)');
+                for (const ev of fEvents) issues.push({ type: 'sensor_failed', event_id: ev.id });
+              }
+            }
+          }
+        } catch (e) {
+          console.log('\n📡 Sensor: not available');
+        }
+
+        console.log('\n════ ' + issues.length + ' issues found ═══');
         if (issues.length > 0) console.log('Run: zea agent improve --app ' + opts.app + ' --auto');
       } catch (e) {
         console.error('Error:', e.message);
