@@ -1,6 +1,6 @@
 ---
 name: zea
-description: ZEA Platform — AI-first infrastructure for coding agents. Use this skill to access all ZEA domains (stitch, venture, sdui, memory, agent, doctor, innovation, ops).
+description: ZEA Platform — AI-first infrastructure for coding agents. Use this skill to access all ZEA domains (stitch, venture, workflow, domain, sdui, memory, agent, doctor, innovation, ops, sensor).
 ---
 
 # ZEA Platform — Agent Skill
@@ -15,6 +15,8 @@ Each domain is a standalone skill+CLI piece. Combine them as needed.
 |--------|-----|------------|-------------|
 | **Stitch** | `zea stitch` | stitch/SKILL.md | Import designs from Google Stitch (MCP) |
 | **Venture** | `zea venture` | venture/SKILL.md | Fund management, capital calls, LPs |
+| **Workflow** | `zea workflow` | — | Human-in-the-loop workflows (Cerebelum) |
+| **Domain** | `zea domain` | — | Multi-domain roles, scopes, RBAC |
 | **SDUI** | `zea sdui` | sdui/SKILL.md | Server-Driven UI sessions |
 | **Memory** | `zea memory` | memory/SKILL.md | Persistent memory per app (agent learning) |
 | **Agent** | `zea agent` | agent/SKILL.md | Manage Glia agents (create, assign, stop) |
@@ -42,6 +44,23 @@ zea auth set-token <token>          # Set PAT manually
 zea org list                        # List your orgs
 zea org switch <id_or_slug>         # Set active org
 zea org create                       # Create new org
+```
+
+### 🔄 Workflows (Cerebelum HITL)
+```bash
+zea workflow list                   # List available workflows
+zea workflow run <module> [inputs]  # Execute a workflow
+zea workflow status <execution_id>  # Get execution status
+zea workflow stop <execution_id>    # Stop a running execution
+zea workflow resume <execution_id>  # Resume a paused execution
+```
+
+### 🔐 Domain Roles & Scopes
+```bash
+zea domain list                     # List available domains and scopes
+zea domain register <domain>        # Register a domain with its scopes
+zea domain grant <user> <domain> <role> --org <org> [--entity-id <id>]
+zea domain revoke <user> <domain> <role>
 ```
 
 ### 🎨 Stitch (Design Import)
@@ -105,6 +124,14 @@ zea doctor check venture            # Layer 3: Data endpoints
 zea doctor check stitch             # Layer 4: Stitch MCP
 zea doctor check glia               # Layer 5: LLM + Tools
 zea doctor check tools              # Layer 6: Skill execution
+```
+
+### 🎙️ Sensor (Audio + AI)
+```bash
+zea sensor transcribe <files...>    # Transcribe audio files to text (MLX Whisper)
+zea sensor events                   # List sensor events
+zea sensor status <event_id>        # Get event status and result
+zea sensor analyze <event_id>       # Analyze event with Glia (DeepSeek)
 ```
 
 ### 💡 Innovation (Customer Discovery)
