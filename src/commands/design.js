@@ -18,10 +18,9 @@ async function writeMemory(appId, file, data) {
 }
 
 export function register(program) {
-  const stitchCmd = program.command('design').description('Design management integration commands');
+  const designCmd = program.command('design').description('Design management integration commands');
 
-  // --- list-screens ---
-  stitchCmd.command('list-screens')
+  designCmd.command('list-screens')
     .description('List Stitch screens for an app')
     .requiredOption('--app <id>', 'App ID')
     .option('--stitch-key <key>', 'Stitch API key (or use STITCH_KEY env)')
@@ -64,7 +63,7 @@ export function register(program) {
     });
 
   // --- import-screen ---
-  stitchCmd.command('import-screen')
+  designCmd.command('import-screen')
     .description('Import a Stitch screen into ZEA app manifest')
     .requiredOption('--app <id>', 'ZEA App ID')
     .requiredOption('--screen-id <id>', 'Stitch screen ID')
@@ -175,7 +174,7 @@ export function register(program) {
     });
 
   // --- status ---
-  stitchCmd.command('status')
+  designCmd.command('status')
     .description('Show import status for an app')
     .requiredOption('--app <id>', 'App ID')
     .action(async (opts) => {
@@ -199,6 +198,61 @@ export function register(program) {
           console.log(`    Date:   ${info.imported_at}`);
           console.log('');
         }
+      } catch (e) {
+        console.error('Error:', e.message);
+      }
+    });
+
+  // --- update-design ---
+  designCmd.command('update-design')
+    .description('Update design system tokens (colors, typography)')
+    .requiredOption('--app <id>', 'ZEA App ID')
+    .requiredOption('--token <path>', 'Token path (e.g. colors.primary, typography.h1_size)')
+    .requiredOption('--value <val>', 'New value')
+    .action(async (opts) => {
+      try {
+        const client = await getClient();
+        const mResp = await fetch(`${client.appsUrl}/api/apps/${opts.app}/manifest`, {
+          headers: client.headers
+        });
+        if (!mResp.ok) throw new Error(`Manifest fetch failed: ${mResp.status}`);
+        const manifest = await mResp.json();
+
+        // Update at the flat level (API response format)
+        const parts = opts.token.split('.');
+        let node = manifest;
+        for (let i = 0; i < parts.length - 1; i++) {
+          node[parts[i]] = node[parts[i]] || {};
+          node = node[parts[i]];
+        }
+        node[parts[parts.length - 1]] = opts.value;
+
+        // Build payload with the manifest as both flat fields and nested manifest
+        const payload = {
+          app_id: manifest.app_id || opts.app,
+          name: manifest.name || 'App',
+          domain_auth: manifest.domain_auth || '',
+          status: manifest.status || 'active',
+          version: manifest.version || '1.0.0',
+          manifest: manifest,
+          states: manifest.states || {},
+          intent_routing: manifest.intent_routing || {},
+          shell: manifest.shell || {},
+          design_system: manifest.design_system || {}
+        };
+
+        const uResp = await fetch(`${client.appsUrl}/api/apps`, {
+          method: 'POST',
+          headers: client.headers,
+          body: JSON.stringify(payload)
+        });
+        if (!uResp.ok) {
+          const err = await uResp.text();
+          throw new Error(`Update failed: ${uResp.status} - ${err.substring(0, 200)}`);
+        }
+
+        console.log(`✅ Design system updated: ${opts.token} = ${opts.value}`);
+        console.log(`   App: ${opts.app}`);
       } catch (e) {
         console.error('Error:', e.message);
       }
