@@ -1,6 +1,6 @@
 ---
 name: zea
-description: ZEA Platform — AI-first infrastructure for coding agents. Use this skill to access all ZEA domains (stitch, venture, workflow, domain, sdui, memory, agent, doctor, innovation, ops, sensor).
+description: ZEA Platform — AI-first infrastructure for coding agents. Use this skill to access all ZEA domains (design, venture, workflow, domain, sdui, memory, agent, doctor, innovation, ops, sensor).
 ---
 
 # ZEA Platform — Agent Skill
@@ -13,7 +13,7 @@ Each domain is a standalone skill+CLI piece. Combine them as needed.
 
 | Domain | CLI | Skill File | Description |
 |--------|-----|------------|-------------|
-| **Stitch** | `zea stitch` | stitch/SKILL.md | Import designs from Google Stitch (MCP) |
+| **Design** | `zea design` | design/SKILL.md | Import designs (Stitch MCP + future tools) |
 | **Venture** | `zea venture` | venture/SKILL.md | Fund management, capital calls, LPs |
 | **Workflow** | `zea workflow` | — | Human-in-the-loop workflows (Cerebelum) |
 | **Domain** | `zea domain` | — | Multi-domain roles, scopes, RBAC |
@@ -63,11 +63,11 @@ zea domain grant <user> <domain> <role> --org <org> [--entity-id <id>]
 zea domain revoke <user> <domain> <role>
 ```
 
-### 🎨 Stitch (Design Import)
+### 🎨 Design (Stitch MCP + future)
 ```bash
-zea stitch list-screens --app <app_id>
-zea stitch import-screen --app <app_id> --screen-id <sid> --state <name> --intent <name>
-zea stitch status --app <app_id>
+zea design list-screens --app <app_id>
+zea design import-screen --app <app_id> --screen-id <sid> --state <name> --intent <name>
+zea design status --app <app_id>
 ```
 
 ### 🧠 Memory (Agent Learning)
@@ -121,7 +121,7 @@ zea doctor run                      # All 6 layers
 zea doctor check api                # Layer 1: Connectivity
 zea doctor check auth               # Layer 2: Authentication
 zea doctor check venture            # Layer 3: Data endpoints
-zea doctor check stitch             # Layer 4: Stitch MCP
+zea doctor check design            # Layer 4: Stitch MCP
 zea doctor check glia               # Layer 5: LLM + Tools
 zea doctor check tools              # Layer 6: Skill execution
 ```
@@ -174,7 +174,7 @@ curl -s http://venture-api.zea.localhost/gp/dashboard -H "Authorization: Bearer 
 ### Layer 4 — Stitch MCP
 ```bash
 # Can we list screens from Stitch?
-zea stitch list-screens --app <app_id>
+zea design list-screens --app <app_id>
 ```
 ✅ Success: screens array with titles and IDs
 
@@ -233,7 +233,7 @@ zea auth login --email user@... --password ...
 
 # Use any domain
 zea venture capital-call list
-zea stitch import-screen --app myapp --screen-id xyz --state dashboard --intent back_to_dashboard
+zea design import-screen --app myapp --screen-id xyz --state dashboard --intent back_to_dashboard
 zea memory init --app myapp --stitch-project 12345
 ```
 
@@ -271,7 +271,7 @@ export function register(program) {
 ~/.zea/
 ├── skills/             ← Agent skills (Lego pieces)
 │   ├── zea/            ← Umbrella (this file)
-│   ├── stitch/         ← zea stitch
+│   ├── design/         ← zea design
 │   ├── venture/        ← zea venture
 │   ├── sdui/           ← zea sdui
 │   ├── memory/         ← zea memory

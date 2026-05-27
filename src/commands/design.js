@@ -18,7 +18,7 @@ async function writeMemory(appId, file, data) {
 }
 
 export function register(program) {
-  const stitchCmd = program.command('stitch').description('Stitch design integration commands');
+  const stitchCmd = program.command('design').description('Design management integration commands');
 
   // --- list-screens ---
   stitchCmd.command('list-screens')
