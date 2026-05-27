@@ -11,7 +11,8 @@ export function register(program) {
       try {
         const client = await getClient();
         const orgId = client.activeOrgId;
-        const headers = { ...client.headers, 'X-Zea-Org-Id': orgId };
+        const headers = { ...client.headers };
+        if (orgId) headers['X-Zea-Org-Id'] = orgId;
         const response = await fetch(`${client.ventureUrl}/gp/funds`, { headers });
         if (!response.ok) {
           const errData = await response.json();
@@ -106,7 +107,8 @@ export function register(program) {
       try {
         const client = await getClient();
         const orgId = client.activeOrgId;
-        const headers = { ...client.headers, 'X-Zea-Org-Id': orgId };
+        const headers = { ...client.headers };
+        if (orgId) headers['X-Zea-Org-Id'] = orgId;
         const response = await fetch(`${client.ventureUrl}/gp/funds/${fundId}`, { headers });
         if (!response.ok) {
           const errData = await response.json();
@@ -134,7 +136,8 @@ export function register(program) {
       try {
         const client = await getClient();
         const orgId = client.activeOrgId;
-        const headers = { ...client.headers, 'X-Zea-Org-Id': orgId, 'Content-Type': 'application/json' };
+        const headers = { ...client.headers, 'Content-Type': 'application/json' };
+        if (orgId) headers['X-Zea-Org-Id'] = orgId;
         const response = await fetch(`${client.ventureUrl}/gp/funds/${fundId}/transition`, {
           method: 'POST',
           headers,
@@ -166,7 +169,8 @@ export function register(program) {
           console.log('No fee config provided. Use --mgmt-fee or --carry.');
           return;
         }
-        const headers = { ...client.headers, 'X-Zea-Org-Id': orgId, 'Content-Type': 'application/json' };
+        const headers = { ...client.headers, 'Content-Type': 'application/json' };
+        if (orgId) headers['X-Zea-Org-Id'] = orgId;
         const response = await fetch(`${client.ventureUrl}/gp/funds/${fundId}`, {
           method: 'PUT',
           headers,
@@ -191,7 +195,8 @@ export function register(program) {
       try {
         const client = await getClient();
         const orgId = client.activeOrgId;
-        const headers = { ...client.headers, 'X-Zea-Org-Id': orgId };
+        const headers = { ...client.headers };
+        if (orgId) headers['X-Zea-Org-Id'] = orgId;
         const response = await fetch(`${client.ventureUrl}/gp/dashboard`, { headers });
         if (!response.ok) {
           const errData = await response.json();
@@ -212,7 +217,8 @@ export function register(program) {
       try {
         const client = await getClient();
         const orgId = client.activeOrgId;
-        const headers = { ...client.headers, 'X-Zea-Org-Id': orgId };
+        const headers = { ...client.headers };
+        if (orgId) headers['X-Zea-Org-Id'] = orgId;
         const response = await fetch(`${client.ventureUrl}/gp/capital-calls`, { headers });
         if (!response.ok) {
           const errData = await response.json();
@@ -271,7 +277,8 @@ export function register(program) {
           console.log(`The capital call will be created, sent, and tracked until ${options.dueDate}.`);
           console.log(`Check progress: zea workflow status ${execId}`);
         } else {
-          const headers = { ...client.headers, 'X-Zea-Org-Id': orgId, 'Content-Type': 'application/json' };
+          const headers = { ...client.headers, 'Content-Type': 'application/json' };
+        if (orgId) headers['X-Zea-Org-Id'] = orgId;
           const response = await fetch(`${client.ventureUrl}/gp/capital-calls`, {
             method: 'POST',
             headers,
@@ -304,7 +311,8 @@ export function register(program) {
       try {
         const client = await getClient();
         const orgId = client.activeOrgId;
-        const headers = { ...client.headers, 'X-Zea-Org-Id': orgId };
+        const headers = { ...client.headers };
+        if (orgId) headers['X-Zea-Org-Id'] = orgId;
         const response = await fetch(`${client.ventureUrl}/gp/capital-calls/${callId}`, { headers });
         if (!response.ok) {
           const errData = await response.json();
@@ -328,7 +336,8 @@ export function register(program) {
       try {
         const client = await getClient();
         const orgId = client.activeOrgId;
-        const headers = { ...client.headers, 'X-Zea-Org-Id': orgId };
+        const headers = { ...client.headers };
+        if (orgId) headers['X-Zea-Org-Id'] = orgId;
         const response = await fetch(`${client.ventureUrl}/gp/capital-calls/${callId}/send`, {
           method: 'POST',
           headers
@@ -351,7 +360,8 @@ export function register(program) {
       try {
         const client = await getClient();
         const orgId = client.activeOrgId;
-        const headers = { ...client.headers, 'X-Zea-Org-Id': orgId };
+        const headers = { ...client.headers };
+        if (orgId) headers['X-Zea-Org-Id'] = orgId;
         const response = await fetch(`${client.ventureUrl}/gp/investors`, { headers });
         if (!response.ok) {
           const errData = await response.json();
@@ -376,7 +386,8 @@ export function register(program) {
       try {
         const client = await getClient();
         const orgId = client.activeOrgId;
-        const headers = { ...client.headers, 'X-Zea-Org-Id': orgId, 'Content-Type': 'application/json' };
+        const headers = { ...client.headers, 'Content-Type': 'application/json' };
+        if (orgId) headers['X-Zea-Org-Id'] = orgId;
         const response = await fetch(`${client.ventureUrl}/gp/investors`, {
           method: 'POST',
           headers,
@@ -402,7 +413,8 @@ export function register(program) {
       try {
         const client = await getClient();
         const orgId = client.activeOrgId;
-        const headers = { ...client.headers, 'X-Zea-Org-Id': orgId, 'Content-Type': 'application/json' };
+        const headers = { ...client.headers, 'Content-Type': 'application/json' };
+        if (orgId) headers['X-Zea-Org-Id'] = orgId;
         const response = await fetch(`${client.ventureUrl}/gp/investors/${options.investor}/commitments`, {
           method: 'POST',
           headers,

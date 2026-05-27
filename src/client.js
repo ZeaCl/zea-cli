@@ -57,7 +57,7 @@ export async function getClient() {
   const config = await loadConfig();
   const token = process.env.ZEA_PAT || process.env.THALAMUS_PAT || process.env.ZEA_TOKEN || config.token;
   const apiUrl = process.env.ZEA_API_URL || process.env.THALAMUS_API_URL || config.apiUrl || 'http://auth.zea.localhost';
-  const activeOrgId = config.activeOrgId || null;
+  const activeOrgId = config.activeOrgId || process.env.ZEA_ORG_ID || null;
   const cerebelumUrl = process.env.ZEA_CEREBELUM_URL || process.env.CEREBELUM_URL || config.cerebelumUrl || 'http://cerebelum.zea.localhost';
   const ventureUrl = process.env.ZEA_VENTURE_URL || config.ventureUrl || 'http://venture.zea.localhost';
   const sduiUrl = process.env.ZEA_SDUI_URL || config.sduiUrl || 'http://sdui.zea.localhost';
