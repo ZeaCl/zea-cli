@@ -231,7 +231,7 @@ export function register(program) {
         const payload = {
           app_id: manifest.app_id || opts.app,
           name: manifest.name || 'App',
-          domain_auth: manifest.domain_auth || '',
+          domain_auth: manifest.domain_auth || 'venture',
           status: manifest.status || 'active',
           version: manifest.version || '1.0.0',
           manifest: manifest,
