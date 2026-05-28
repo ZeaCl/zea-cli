@@ -21,9 +21,12 @@ Skill umbrella para ZEA Platform. Documenta skills disponibles, CLI, y la API de
 | Sensor | `zea sensor` | sensor/SKILL.md |
 | Orchestrate | `zea agent plan` | orchestrate/SKILL.md |
 
-## 🤖 Glia Agent API
+## 🤖 Agentes
 
-Para interactuar con el asistente IA de ZEA Platform.
+ZEA tiene dos agentes independientes. Cada uno con su propio contexto. Un agente puede delegar tareas al otro cuando lo necesita.
+
+### Glia — Planificación y razonamiento
+Para analizar, planificar, usar skills y herramientas de negocio.
 
 ```
 POST /api/agent/chat
@@ -31,43 +34,66 @@ Content-Type: application/json
 Authorization: Bearer <JWT>
 ```
 
-### Request
+**Request:**
 ```json
 {
-  "text": "¿Cuántos fondos hay?",
+  "text": "Planificá cómo cambiar el color primario",
   "plan_mode": false,
   "session_id": "opcional-para-seguimiento"
 }
 ```
 
-### Response: SSE stream
+**Response:** SSE stream con eventos `reasoning`, `tool`, `text`, `question`, `done`.
+
+Glia puede delegar ejecución a opencode cuando necesita bash, CLI o modificar archivos.
+
+### opencode — Ejecución
+Para bash, CLI, ZEA CLI, modificar archivos, git.
+
 ```
-event: reasoning
-data: {"text":"El usuario pregunta por fondos..."}
-
-event: text
-data: {"text":"Hay 13 fondos activos. El último..."}
-
-event: done
-data: {}
+POST http://opencode:4096/session
+POST http://opencode:4096/session/{id}/message
+GET  http://opencode:4096/session/{id}/message
 ```
 
-### Eventos
-| Evento | Significado |
-|--------|-------------|
-| `reasoning` | Pensamiento interno del agente |
-| `tool` | Ejecutando herramienta |
-| `text` | Respuesta final al usuario |
-| `question` | Pregunta al usuario (espera respuesta) |
-| `error` | Error con código y mensaje |
-| `done` | Fin del stream |
+opencode puede delegar análisis a Glia cuando necesita planificar o razonar.
 
-### Ejemplo
+### ¿Cuál usar como principal?
+| Si necesitás... | Conectate a |
+|---|---|
+| Analizar, planificar, preguntar | **Glia** |
+| Ejecutar bash, CLI, modificar archivos | **opencode** |
+| Ambos | Cualquiera — delega al otro internamente |
+
+### Agentes que se delegan entre sí
+
+```
+Usuario → Glia (principal)
+  Glia analiza → decide que necesita ejecutar
+  Glia → POST opencode/session → opencode ejecuta
+  opencode responde → Glia interpreta → responde al usuario
+
+Usuario → opencode (principal)
+  opencode ejecuta → necesita planificar
+  opencode → curl Glia/api/agent/chat → Glia planifica
+  Glia responde → opencode usa el plan → ejecuta
+```
+
+### Ejemplo con Glia como principal
 ```bash
 curl -N -X POST http://glia.zea.localhost/api/agent/chat \
   -H "Authorization: Bearer $ZEA_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"text":"¿Cuántos fondos hay?","plan_mode":false}'
+```
+
+### Ejemplo con opencode como principal
+```bash
+# Crear sesión
+curl -X POST http://opencode:4096/session -d '{"title":"chat"}'
+# Enviar mensaje
+curl -X POST http://opencode:4096/session/{id}/message \
+  -d '{"model":{"providerID":"deepseek","modelID":"deepseek-v4-pro"},"parts":[{"type":"text","text":"¿Cuántos fondos hay?"}]}'
 ```
 
 ## 🔐 Autenticación
