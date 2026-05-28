@@ -72,10 +72,39 @@ curl -N -X POST http://glia.zea.localhost/api/agent/chat \
 
 ## 🔐 Autenticación
 
+### Si NO tenés token
+1. Pedile a un humano que ejecute:
+```
+zea auth login
+zea token create --name "nombre-del-agente"
+```
+2. Copiá el token que aparece (solo se muestra una vez)
+3. Configuralo: `export ZEA_TOKEN=<token>`
+
+### Si YA tenés token
+Usalo en el header de cada request:
+```
+Authorization: Bearer $ZEA_TOKEN
+```
+
+### Gestionar tokens
 ```bash
-zea auth login              # OAuth2 interactivo
-zea org list                # Organizaciones disponibles
-zea org switch <id>         # Cambiar org activa
+zea token list          # ver tokens activos
+zea token revoke <id>   # revocar un token
+zea org list            # organizaciones disponibles
+zea org switch <id>     # cambiar org activa
+```
+
+### Ejemplo completo
+```bash
+# 1. Configurar token (una vez)
+export ZEA_TOKEN=zea_pat_xxxxxxxxxxxxx
+
+# 2. Usar la API de Glia
+curl -N -X POST http://glia.zea.localhost/api/agent/chat \
+  -H "Authorization: Bearer $ZEA_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"text":"¿Cuántos fondos hay?","plan_mode":false}'
 ```
 
 ## 📋 Comandos CLI rápidos
