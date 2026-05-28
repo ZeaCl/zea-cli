@@ -74,55 +74,67 @@ async function interactiveTUI() {
   const bar = () => {
     const mode = pm ? chalk.bgYellow.black(' Plan ') : chalk.bgBlue.white(' Build ');
     const rhs = chalk.dim('Tab=modo  Esc=cancelar');
-    const w = W();
-    return '\r' + mode + ' '.repeat(Math.max(0, w - mode.replace(/\u001b\[\d+m/g,'').length - rhs.replace(/\u001b\[\d+m/g,'').length)) + rhs + '\u001b[K';
+    return '\r' + mode + ' '.repeat(Math.max(0, W() - 7 - rhs.length - 10)) + rhs + '\u001b[K';
   };
 
   const clearLn = () => process.stdout.write('\u001b[2K\r');
   const prompt = () => chalk.cyan('▸ ') + inputBuf;
 
-  function redraw() {
-    process.stdout.write('\u001b7');
-    process.stdout.write('\u001b[1;1H\u001b[2K');
-    process.stdout.write(bar());
-    process.stdout.write('\n');
-    clearLn();
-    process.stdout.write(prompt());
-    process.stdout.write('\u001b8');
-  }
-
   const client = await getClient();
 
-  console.log(chalk.dim(`Glia (${backend}) — Tab=modo  Esc=cancelar`));
-  process.stdout.write(bar() + '\n');
-  clearLn();
-  process.stdout.write(prompt());
+  console.log(chalk.dim(`Glia (${backend})`));
+  process.stdout.write('\n');
+  process.stdout.write(prompt() + '\n');
+  process.stdout.write(bar());
 
   process.stdin.setRawMode(true);
   process.stdin.resume();
   process.stdin.setEncoding('utf8');
 
-  process.stdin.on('data', async (key) => {
-    if (key === '\u0003' || key === '\u0004') { cleanup(); return; }
+  let lastCtrlC = 0;
 
-    if (key === '\u001b') {
-      if (currentRequest) { currentRequest.abort(); currentRequest = null; console.log(chalk.red('\n[cancelado]')); }
+  process.stdin.on('data', async (key) => {
+    // Ctrl+C — twice to exit, once to cancel
+    if (key === '\u0003') {
+      if (currentRequest) {
+        currentRequest.abort(); currentRequest = null;
+        process.stdout.write(chalk.red('\n[cancelado]\n'));
+        process.stdout.write(bar());
+        return;
+      }
+      if (Date.now() - lastCtrlC < 800) { cleanup(); return; }
+      lastCtrlC = Date.now();
+      process.stdout.write(chalk.dim('\nCtrl+C de nuevo para salir\n'));
+      process.stdout.write(bar());
       return;
     }
 
+    if (key === '\u0004') { cleanup(); return; }
+
+    // Esc — cancelar
+    if (key === '\u001b') {
+      if (currentRequest) {
+        currentRequest.abort(); currentRequest = null;
+        process.stdout.write(chalk.red('\n[cancelado]\n'));
+        process.stdout.write(bar());
+      }
+      return;
+    }
+
+    // Tab — toggle plan/build
     if (key === '\t') { pm = !pm; process.stdout.write('\r' + bar()); return; }
 
+    // Enter
     if (key === '\r' || key === '\n') {
       const txt = inputBuf.trim(); inputBuf = '';
       clearLn(); process.stdout.write(chalk.cyan('▸ ') + txt + '\n');
-      process.stdout.write(bar() + '\n');
 
       if (txt === '/exit') { cleanup(); return; }
-      if (txt === '/plan') { pm = true; process.stdout.write(bar() + '\n'); drawPrompt(); return; }
-      if (txt === '/build') { pm = false; process.stdout.write(bar() + '\n'); drawPrompt(); return; }
-      if (txt === '/clear') { console.clear(); process.stdout.write(bar() + '\n'); drawPrompt(); return; }
-      if (txt === '/new') { sid = null; process.stdout.write(bar() + '\n'); drawPrompt(); return; }
-      if (!txt) { drawPrompt(); return; }
+      if (txt === '/plan') { pm = true; drawPrompt(); process.stdout.write('\n' + bar()); return; }
+      if (txt === '/build') { pm = false; drawPrompt(); process.stdout.write('\n' + bar()); return; }
+      if (txt === '/clear') { console.clear(); drawPrompt(); process.stdout.write('\n' + bar()); return; }
+      if (txt === '/new') { sid = null; drawPrompt(); process.stdout.write('\n' + bar()); return; }
+      if (!txt) { drawPrompt(); process.stdout.write('\n' + bar()); return; }
 
       await sendMessageTUI(client, txt);
       return;
@@ -159,8 +171,8 @@ async function sendMessageTUI(client, txt) {
     if (e.name !== 'AbortError') Display.errorMsg(e.message);
   }
   currentRequest = null;
-  process.stdout.write('\r' + (pm ? chalk.bgYellow.black(' Plan ') : chalk.bgBlue.white(' Build ')) + chalk.dim(' Tab=modo  Esc=cancelar') + '\n');
   drawPrompt();
+  process.stdout.write('\n' + bar());
 }
 
 function cleanup() {
