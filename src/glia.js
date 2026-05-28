@@ -100,9 +100,9 @@ async function interactiveTUI() {
 
   const bar = () => {
     const mode = pm ? chalk.bgYellow.black(' Plan ') : chalk.bgBlue.white(' Build ');
-    const dot = currentRequest ? chalk.blue(SPIN[spinnerFrame]) : ' ';
-    const rhs = currentRequest ? dot : chalk.dim('Tab=modo  Esc=cancelar');
-    return '\r' + mode + ' '.repeat(Math.max(0, W() - 7 - rhs.length - 10)) + rhs + '\u001b[K';
+    const dot = currentRequest ? chalk.blue(' ' + SPIN[spinnerFrame]) : '';
+    const rhs = chalk.dim(' Tab=modo  Esc=cancelar');
+    return '\r' + mode + dot + ' '.repeat(Math.max(0, W() - 7 - dot.length - rhs.length)) + rhs + '\u001b[K';
   };
 
   const clearLn = () => process.stdout.write('\u001b[2K\r');
