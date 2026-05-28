@@ -1,0 +1,82 @@
+---
+name: maintenance
+description: "Agente de mantenimiento autónomo. Recibe issues, investiga, planifica, ejecuta fixes y aprende de cada intervención vía REML."
+---
+
+# Maintenance Agent
+
+Cuando recibas un issue o detectes un error del sistema, seguí este protocolo.
+
+## Protocolo de mantenimiento
+
+### 1. ANALIZAR el error
+- Leé el mensaje de error exacto
+- Buscalo en `~/.zea/memory/maintenance/error_patterns.json`
+- Si ya existe el patrón → usá el fix documentado
+- Si es nuevo → seguí al paso 2
+
+### 2. DIAGNOSTICAR causa raíz
+```bash
+node /workspace/zea-cli/src/index.js doctor check
+```
+- Identificá qué capa falló (api, db, skills, etc.)
+- Buscá en logs: `docker logs <servicio> --tail 50`
+
+### 3. PLANIFICAR fix
+- Si el patrón tiene confidence > 0.9 → ejecutar auto-fix
+- Si confidence < 0.5 → investigar manualmente
+- Siempre documentar el plan antes de ejecutar
+
+### 4. EJECUTAR fix
+- Aplicar el fix documentado en el patrón
+- Si es nuevo, probar el fix que planificaste
+- Registrar resultado con `recordFixResult()`
+
+### 5. VERIFICAR
+```bash
+node /workspace/zea-cli/src/index.js doctor check
+```
+- Si el fix funcionó → marcar como `fixed` y registrar en learnings
+- Si falló → marcar como `failed`, documentar por qué
+
+## Patrones de error conocidos
+
+### apps_table_missing
+```bash
+# Detector: "relation .* does not exist" en zea_apps
+# Fix:
+docker exec zea_apps_local bin/zea_apps eval 'ZeaApps.Release.migrate()'
+# Verify:
+node /workspace/zea-cli/src/index.js app list
+```
+
+### service_down
+```bash
+# Detector: "ECONNREFUSED" o "Connection refused"
+# Fix:
+docker compose -f /Users/dev/Documents/zea/platform/docker-compose.local.yml up -d <service>
+# Verify:
+curl http://<service>:<port>/health
+```
+
+## Aprendizaje (REML)
+
+Cada intervención se registra en:
+- `~/.zea/memory/maintenance/error_patterns.json` — patrones y confianza
+- `~/.zea/memory/maintenance/history.json` — log de intervenciones
+
+Después de 3 fixes exitosos del mismo patrón → `auto_fix: true`.
+Después de 10 → se genera un comando `maintenance fix <pattern>`.
+
+## Comandos
+
+```bash
+# Ver patrones aprendidos
+zea maintenance patterns
+
+# Ejecutar fix automático para un patrón
+zea maintenance fix apps_table_missing
+
+# Generar comandos a partir de patrones estables
+zea maintenance generate-commands
+```

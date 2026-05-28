@@ -275,4 +275,133 @@ function sanitizeParams(params) {
   return clean;
 }
 
-export { readJSON, writeJSON, buildConfidence, getRecentFailures };
+export { readJSON, writeJSON, buildConfidence, getRecentFailures, recordFixResult };
+
+// ── Error Pattern Recognition ────────────────────────────
+
+/**
+ * Suggests a fix for an error based on learned patterns.
+ * Returns null if no pattern matches.
+ */
+export async function suggestFix(errorMessage) {
+  const dir = path.join(MEMORY_DIR, 'maintenance');
+  const patternsPath = path.join(dir, 'error_patterns.json');
+  const patterns = await readJSON(patternsPath) || {};
+
+  for (const [name, p] of Object.entries(patterns)) {
+    if (new RegExp(p.matches).test(errorMessage)) {
+      return {
+        name,
+        fix: p.fix,
+        detect: p.detect,
+        verify: p.verify,
+        confidence: p.confidence || 0.5,
+        auto_fix: p.auto_fix || false,
+        times_seen: p.times_seen || 0
+      };
+    }
+  }
+  return null;
+}
+
+/**
+ * Records the result of applying a fix.
+ * Updates confidence and auto_fix flag.
+ */
+export async function recordFixResult(patternName, success, errorMessage, fixApplied) {
+  const dir = path.join(MEMORY_DIR, 'maintenance');
+  await fs.mkdir(dir, { recursive: true });
+  const patternsPath = path.join(dir, 'error_patterns.json');
+  const patterns = await readJSON(patternsPath) || {};
+
+  if (!patterns[patternName]) {
+    patterns[patternName] = {
+      matches: errorMessage,
+      service: 'unknown',
+      fix: fixApplied,
+      detect: '',
+      verify: '',
+      times_seen: 0,
+      times_fixed: 0,
+      confidence: 0.1,
+      auto_fix: false,
+      first_seen: new Date().toISOString(),
+      last_seen: new Date().toISOString()
+    };
+  }
+
+  const p = patterns[patternName];
+  p.times_seen++;
+  if (success) p.times_fixed++;
+  if (fixApplied && !p.fix) p.fix = fixApplied;
+  p.last_seen = new Date().toISOString();
+
+  // Recalculate confidence
+  if (p.times_seen >= 3) {
+    p.confidence = Math.round((p.times_fixed / p.times_seen) * 100) / 100;
+  }
+  if (p.confidence >= 0.9) p.auto_fix = true;
+
+  await writeJSON(patternsPath, patterns);
+  return patterns[patternName];
+}
+
+/**
+ * Registers a new error pattern or updates an existing one.
+ */
+export async function registerErrorPattern(name, matches, service, fix, detect, verify) {
+  const dir = path.join(MEMORY_DIR, 'maintenance');
+  await fs.mkdir(dir, { recursive: true });
+  const patternsPath = path.join(dir, 'error_patterns.json');
+  const patterns = await readJSON(patternsPath) || {};
+
+  patterns[name] = {
+    matches,
+    service,
+    fix,
+    detect,
+    verify,
+    times_seen: patterns[name]?.times_seen || 0,
+    times_fixed: patterns[name]?.times_fixed || 0,
+    confidence: patterns[name]?.confidence || 0.1,
+    auto_fix: false,
+    first_seen: patterns[name]?.first_seen || new Date().toISOString(),
+    last_seen: new Date().toISOString()
+  };
+
+  await writeJSON(patternsPath, patterns);
+  return patterns[name];
+}
+
+/**
+ * Lists all known error patterns with their confidence and auto_fix status.
+ */
+export async function listErrorPatterns() {
+  const dir = path.join(MEMORY_DIR, 'maintenance');
+  const patternsPath = path.join(dir, 'error_patterns.json');
+  return await readJSON(patternsPath) || {};
+}
+
+/**
+ * Generates CLI commands for error patterns with high confidence.
+ * These become part of the maintenance skill.
+ */
+export async function generateCommands() {
+  const patterns = await listErrorPatterns();
+  const commands = [];
+
+  for (const [name, p] of Object.entries(patterns)) {
+    if (p.confidence >= 0.9 && p.auto_fix && p.times_seen >= 5) {
+      commands.push({
+        command: `maintenance fix ${name}`,
+        description: `Auto-fix: ${p.service} - ${name}`,
+        steps: p.fix.split(' && '),
+        verify: p.verify,
+        confidence: p.confidence,
+        times_fixed: p.times_fixed
+      });
+    }
+  }
+
+  return commands;
+}
