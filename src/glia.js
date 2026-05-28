@@ -85,14 +85,23 @@ async function interactiveSimple() {
 
 // ── TUI Interactive ──────────────────────────────────────
 
-let pm = planMode, sid = null, inputBuf = '', currentRequest = null;
+let pm = planMode, sid = null, inputBuf = '', currentRequest = null, spinnerFrame = 0, spinnerTimer = null;
+
+const SPIN = '⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏';
 
 async function interactiveTUI() {
   const W = () => process.stdout.columns || 80;
 
+  // Start spinner animation
+  spinnerTimer = setInterval(() => {
+    spinnerFrame = (spinnerFrame + 1) % SPIN.length;
+    if (currentRequest) process.stdout.write('\r' + bar());
+  }, 80);
+
   const bar = () => {
     const mode = pm ? chalk.bgYellow.black(' Plan ') : chalk.bgBlue.white(' Build ');
-    const rhs = currentRequest ? chalk.dim('⏳ procesando...') : chalk.dim('Tab=modo  Esc=cancelar');
+    const dot = currentRequest ? chalk.blue(SPIN[spinnerFrame]) : ' ';
+    const rhs = currentRequest ? dot : chalk.dim('Tab=modo  Esc=cancelar');
     return '\r' + mode + ' '.repeat(Math.max(0, W() - 7 - rhs.length - 10)) + rhs + '\u001b[K';
   };
 
@@ -198,6 +207,7 @@ async function sendMessageTUI(client, txt, statusBar) {
 }
 
 function cleanup() {
+  if (spinnerTimer) clearInterval(spinnerTimer);
   process.stdin.setRawMode(false);
   process.stdin.pause();
   console.log(chalk.dim('\nChau!\n'));
