@@ -2,11 +2,26 @@
 import { getClient } from './client.js';
 import * as Display from './utils/display.js';
 import chalk from 'chalk';
+import fs from 'fs/promises';
+import path from 'path';
+import os from 'os';
 
 const args = process.argv.slice(2);
 const planMode = args.includes('--plan');
 const backend = args.includes('--react') ? 'react' : 'opencode';
 const message = args.filter(a => !a.startsWith('--')).join(' ');
+
+const SESSION_FILE = path.join(os.homedir(), '.glia', 'session.json');
+
+async function loadSession() {
+  try { return JSON.parse(await fs.readFile(SESSION_FILE, 'utf8')); }
+  catch { return {}; }
+}
+
+async function saveSession(sid) {
+  await fs.mkdir(path.dirname(SESSION_FILE), { recursive: true });
+  await fs.writeFile(SESSION_FILE, JSON.stringify({ session_id: sid, last_used: new Date().toISOString() }));
+}
 
 async function main() {
   if (message) return chat(message);
@@ -18,21 +33,33 @@ async function main() {
 
 async function chat(text) {
   const client = await getClient();
+  const session = await loadSession();
+
   console.log(chalk.dim(`Glia (${backend})`));
+  const body = { text, plan_mode: planMode };
+  if (session.session_id) body.session_id = session.session_id;
+
   const resp = await fetch(`${client.gliaUrl}/api/agent/chat`, {
     method: 'POST', headers: client.headers,
-    body: JSON.stringify({ text, plan_mode: planMode })
+    body: JSON.stringify(body)
   });
   if (!resp.ok) { Display.errorMsg(`HTTP ${resp.status}`); process.exit(1); }
+
+  // Save session for next call
+  await saveSession(session.session_id || generateSid());
+
   await streamSSE(resp);
   process.exit(0);
 }
+
+function generateSid() { return 'g' + Math.random().toString(36).slice(2, 10); }
 
 // ── Simple interactive (pipe / test) ─────────────────────
 
 async function interactiveSimple() {
   const client = await getClient();
-  let pm = planMode, sid = null;
+  const session = await loadSession();
+  let pm = planMode, sid = session.session_id || null;
 
   console.log(chalk.dim(`\nGlia (${backend}) — chat interactivo`));
   console.log(chalk.dim('  /plan  /build  /clear  /new  /exit\n'));
