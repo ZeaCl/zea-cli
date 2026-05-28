@@ -4,11 +4,14 @@ export function register(program) {
   const appCmd = program.command('app').description('App manifest management (zea_apps)');
 
   appCmd.command('list')
-    .description('List registered apps')
+    .description('List registered apps for the active organization')
     .action(async () => {
       try {
         const client = await getClient();
-        const response = await fetch(`${client.appsUrl}/api/apps`, { headers: client.headers });
+        const url = client.activeOrgId
+          ? `${client.appsUrl}/api/apps?org_id=${client.activeOrgId}`
+          : `${client.appsUrl}/api/apps`;
+        const response = await fetch(url, { headers: client.headers });
         if (!response.ok) {
           const errData = await response.json();
           throw new Error(errData.error || `HTTP error ${response.status}`);

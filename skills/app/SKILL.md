@@ -86,31 +86,35 @@ zea app register ~/.zea/platform/apps/<app_id>/manifest.json
 
 Cuando el usuario pida "ver la app", "mostrame la app", "abrir la app", seguí este flujo:
 
-### 1. Verificar que la app funciona
+### 1. Saber qué app usar
+```bash
+# Listar apps disponibles
+node /workspace/zea-cli/src/index.js app list
+```
+- Si hay solo una → usarla automáticamente
+- Si hay varias → mostrar la lista y preguntar: "¿Cuál app querés ver?"
+- La app actualmente activa es `sudlich_ventures`
+
+### 2. Verificar que la app funciona
 ```bash
 node /workspace/zea-cli/src/index.js doctor check
 ```
 
-### 2. Si el doctor falla
+### 3. Si el doctor falla
 - Reportá qué capa falló (api, auth, venture, skills, etc.)
 - Si el fallo es crítico: `doctor check --fix`
 - Si no se puede reparar: explicar al usuario qué servicio no responde
 
-### 3. Si todo OK
-La app está disponible en:
+### 4. Si todo OK
+Mostrar la URL:
 ```
 http://sudlich.zea.localhost/
 ```
 
-### 4. Instrucciones para el usuario
-- Abrí `http://sudlich.zea.localhost/` en tu navegador
+### 5. Instrucciones para el usuario
+- Abrí la URL en tu navegador
 - Login: `c@zea.cl` / `demo1234`
 - Vas a ver el Dashboard con sidebar, KPI cards y chat del asistente
-
-### 5. Si es producción (no local)
-```
-https://sudlich.zea.cl/
-```
 
 ## Ver preview de experiment
 
