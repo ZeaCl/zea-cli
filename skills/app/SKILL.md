@@ -84,10 +84,14 @@ zea app register ~/.zea/platform/apps/<app_id>/manifest.json
 
 ## Error recovery
 
-Si cualquier operación de esta skill falla (HTTP 500, "apps table missing", "relation does not exist"):
+⚠️ CRÍTICO: Si algo falla, NO investigues por tu cuenta.
+NO busques código fuente. NO pruebes otros comandos. NO uses docker, ps, o bash.
+Derivar a maintenance es tu ÚNICA opción.
 
-### 1. NO intentes arreglarlo vos
-No leas código fuente, no intentes bash, no improvisar. El error es de infraestructura.
+Si cualquier operación falla (HTTP 500, error, etc.):
+
+### 1. PARÁ inmediatamente
+No sigas intentando. No explores. No improvisar.
 
 ### 2. DERIVÁ a maintenance agent
 Creá una sesión en opencode-maintenance:4097 con este prompt exacto:
