@@ -33,21 +33,13 @@ async function main() {
 
 async function chat(text) {
   const client = await getClient();
-  const session = await loadSession();
 
   console.log(chalk.dim(`Glia (${backend})`));
-  const body = { text, plan_mode: planMode };
-  if (session.session_id) body.session_id = session.session_id;
-
   const resp = await fetch(`${client.gliaUrl}/api/agent/chat`, {
     method: 'POST', headers: client.headers,
-    body: JSON.stringify(body)
+    body: JSON.stringify({ text, plan_mode: planMode })
   });
   if (!resp.ok) { Display.errorMsg(`HTTP ${resp.status}`); process.exit(1); }
-
-  // Save session for next call
-  await saveSession(session.session_id || generateSid());
-
   await streamSSE(resp);
   process.exit(0);
 }
