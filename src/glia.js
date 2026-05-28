@@ -203,7 +203,7 @@ function cleanup() {
 
 // ── SSE Stream ────────────────────────────────────────────
 
-async function streamSSE(resp) {
+async function streamSSE(resp, onEvent) {
   const reader = resp.body.getReader();
   const dec = new TextDecoder();
   let buf = '', ev = '';
@@ -218,6 +218,8 @@ async function streamSSE(resp) {
       else if (line.startsWith('data: ')) {
         try {
           const d = JSON.parse(line.slice(6));
+          // Notificar al callback si existe (para capturar session_id)
+          if (onEvent) onEvent(ev, d);
           switch (ev) {
             case 'reasoning': Display.reasoning(d.text || ''); break;
             case 'tool': Display.tool(d.text || '', d.status); break;
