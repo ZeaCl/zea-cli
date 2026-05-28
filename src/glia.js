@@ -136,7 +136,7 @@ async function interactiveTUI() {
       if (txt === '/new') { sid = null; drawPrompt(); process.stdout.write('\n' + bar()); return; }
       if (!txt) { drawPrompt(); process.stdout.write('\n' + bar()); return; }
 
-      await sendMessageTUI(client, txt);
+      await sendMessageTUI(client, txt, bar);
       return;
     }
 
@@ -154,7 +154,7 @@ function drawPrompt() {
   process.stdout.write(chalk.cyan('▸ ') + inputBuf);
 }
 
-async function sendMessageTUI(client, txt) {
+async function sendMessageTUI(client, txt, bar) {
   const abort = new AbortController();
   currentRequest = abort;
   const body = { text: txt, plan_mode: pm };
