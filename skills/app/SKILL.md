@@ -135,6 +135,13 @@ Mostrar la URL:
 http://sudlich.zea.localhost/
 ```
 
+⚠️  NUNCA uses estas URLs internas (son para Docker, no para el usuario):
+  ❌ http://localhost:4006/app?app_id=...
+  ❌ http://sdui-engine:4006/...
+  ❌ http://localhost:4006/...
+
+La URL pública SIEMPRE es: http://sudlich.zea.localhost/
+
 ### 5. Instrucciones para el usuario
 - Abrí la URL en tu navegador
 - Login: `c@zea.cl` / `demo1234`
