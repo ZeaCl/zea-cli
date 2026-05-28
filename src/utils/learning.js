@@ -275,7 +275,7 @@ function sanitizeParams(params) {
   return clean;
 }
 
-export { readJSON, writeJSON, buildConfidence, getRecentFailures, recordFixResult };
+export { readJSON, writeJSON, buildConfidence, getRecentFailures };
 
 // ── Error Pattern Recognition ────────────────────────────
 
