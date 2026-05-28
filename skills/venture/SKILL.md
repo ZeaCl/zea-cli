@@ -33,3 +33,21 @@ curl http://venture-api:4081/gp/funds -H "Authorization: Bearer $ZEA_TOKEN" -H "
 curl http://venture-api:4081/gp/capital-calls -H "Authorization: Bearer $ZEA_TOKEN" -H "x-zea-org-id: $ZEA_ORG_ID"
 curl http://venture-api:4081/gp/investors -H "Authorization: Bearer $ZEA_TOKEN" -H "x-zea-org-id: $ZEA_ORG_ID"
 ```
+
+## Error recovery
+
+Si venture commands fallan (HTTP 500, "undefined_table", "ECONNREFUSED"):
+
+### 1. Diagnóstico
+```bash
+docker exec zea_postgres_venture_local psql -U app_user -d venture_prod -c "\dt"
+```
+- Si "relation does not exist" → DB sin migraciones
+- Si ECONNREFUSED → servicio caído
+
+### 2. DERIVÁ a maintenance agent
+POST opencode-maintenance:4097/session
+Prompt: "Issue: venture-api. {error}. Skill: maintenance. Fix: run migrations or restart service."
+
+### 3. Reintentar
+Si maintenance reporta "fixed" → reintentar la operación original.

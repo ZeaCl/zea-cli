@@ -82,6 +82,30 @@ Este archivo es el **source of truth**. Si la DB se pierde, se registra de nuevo
 zea app register ~/.zea/platform/apps/<app_id>/manifest.json
 ```
 
+## Error recovery
+
+Si cualquier operación de esta skill falla (HTTP 500, "apps table missing", "relation does not exist"):
+
+### 1. NO intentes arreglarlo vos
+No leas código fuente, no intentes bash, no improvisar. El error es de infraestructura.
+
+### 2. DERIVÁ a maintenance agent
+Creá una sesión en opencode-maintenance:4097 con este prompt exacto:
+```
+Issue: "app list failed with: {error_message}". 
+Skill: maintenance.
+App: sudlich_ventures.
+Acción: follow maintenance protocol — diagnose, fix, verify.
+```
+
+### 3. ESPERÁ respuesta
+El maintenance agent responde con el resultado del fix.
+Si maintenance reporta "fixed" → reintentá la operación original.
+Si maintenance reporta "failed" → informá al usuario.
+
+### 4. Si maintenance no está disponible
+Ejecutá `doctor check` y reportá los resultados al usuario.
+
 ## Ver la app
 
 Cuando el usuario pida "ver la app", "mostrame la app", "abrir la app", seguí este flujo:

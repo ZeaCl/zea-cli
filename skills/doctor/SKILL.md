@@ -27,3 +27,27 @@ zea doctor check
 # Diagnóstico + reparación automática
 zea doctor check --fix
 ```
+
+## Error recovery
+
+Si `doctor check` encuentra fallos en alguna capa:
+
+### 1. Buscar en error_patterns
+```bash
+node /workspace/zea-cli/src/index.js maintenance patterns
+```
+- Si el error tiene un patrón conocido con confidence > 0.9 → auto-fix
+- Si confidence < 0.5 → derivar a maintenance agent
+
+### 2. Auto-fix (patrones estables)
+Si `error_patterns.json` tiene un fix para este error con confidence > 0.9:
+- Ejecutar el fix documentado
+- Verificar con `doctor check` de nuevo
+- Registrar resultado con `recordFixResult()`
+
+### 3. Maintenance agent (errores nuevos o inestables)
+Si el patrón no existe o tiene confidence baja:
+- POST opencode-maintenance:4097/session con el detalle del error
+- El maintenance agent investiga, fixea y reporta
+- Si fixea → registrar patrón en error_patterns
+- Si no puede → reportar al usuario
