@@ -92,7 +92,7 @@ async function interactiveTUI() {
 
   const bar = () => {
     const mode = pm ? chalk.bgYellow.black(' Plan ') : chalk.bgBlue.white(' Build ');
-    const rhs = chalk.dim('Tab=modo  Esc=cancelar');
+    const rhs = currentRequest ? chalk.dim('⏳ procesando...') : chalk.dim('Tab=modo  Esc=cancelar');
     return '\r' + mode + ' '.repeat(Math.max(0, W() - 7 - rhs.length - 10)) + rhs + '\u001b[K';
   };
 
@@ -173,11 +173,14 @@ function drawPrompt() {
   process.stdout.write(chalk.cyan('▸ ') + inputBuf);
 }
 
-async function sendMessageTUI(client, txt, bar) {
+async function sendMessageTUI(client, txt, statusBar) {
   const abort = new AbortController();
   currentRequest = abort;
   const body = { text: txt, plan_mode: pm };
   if (sid) body.session_id = sid;
+
+  // Show progress in status bar
+  process.stdout.write('\r' + statusBar());
 
   try {
     const resp = await fetch(`${client.gliaUrl}/api/agent/chat`, {
@@ -185,13 +188,13 @@ async function sendMessageTUI(client, txt, bar) {
       signal: abort.signal
     });
     if (!resp.ok) Display.errorMsg(`HTTP ${resp.status}`);
-    else await streamSSE(resp);
+    else await streamSSE(resp, () => process.stdout.write('\r' + statusBar()));
   } catch (e) {
     if (e.name !== 'AbortError') Display.errorMsg(e.message);
   }
   currentRequest = null;
   drawPrompt();
-  process.stdout.write('\n' + bar());
+  process.stdout.write('\n' + statusBar());
 }
 
 function cleanup() {
