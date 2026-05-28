@@ -13,6 +13,7 @@ Skills **públicas** disponibles para cualquier agente de código.
 
 | Domain | CLI | Skill | Descripción |
 |--------|-----|-------|-------------|
+| App | `zea app` | app/SKILL.md | Crear, registrar, modificar apps |
 | Design | `zea design` | design/SKILL.md | Importar screens Stitch, cambiar colores |
 | Venture | `zea venture` | venture/SKILL.md | Fondos, capital calls, investors |
 | SDUI | `zea sdui` | sdui/SKILL.md | Manifiestos, estados, intents |
