@@ -72,6 +72,95 @@ export function register(program) {
       }
     });
 
+  agentCmd.command('interactive')
+    .description('Interactive chat with Glia (REPL with /plan, /build, /exit)')
+    .option('--backend <name>', 'Agent backend: opencode (default) o react')
+    .action(async (options) => {
+      try {
+        const client = await getClient();
+        const backend = options.backend || 'opencode';
+        let planMode = false;
+        let sessionId = null;
+
+        console.log(chalk.dim(`\nGlia (${backend}) — sesión interactiva`));
+        console.log(chalk.dim('Comandos: /plan /build /clear /exit\n'));
+
+        const readline = (await import('readline')).default;
+        const rl = readline.createInterface({
+          input: process.stdin,
+          output: process.stdout,
+          prompt: chalk.cyan('▸ '),
+        });
+        rl.prompt();
+
+        const sendAndStream = async (text) => {
+          const body = { text, plan_mode: planMode };
+          if (sessionId) body.session_id = sessionId;
+
+          const response = await fetch(`${client.gliaUrl}/api/agent/chat`, {
+            method: 'POST',
+            headers: client.headers,
+            body: JSON.stringify(body)
+          });
+
+          if (!response.ok) {
+            Display.errorMsg(`HTTP ${response.status}`);
+            rl.prompt();
+            return;
+          }
+
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = '';
+          let eventType = '';
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+
+            for (const line of lines) {
+              if (line.startsWith('event: ')) {
+                eventType = line.slice(7).trim();
+              } else if (line.startsWith('data: ')) {
+                const jsonStr = line.slice(6);
+                try {
+                  const data = JSON.parse(jsonStr);
+                  switch (eventType) {
+                    case 'reasoning': Display.reasoning(data.text || ''); break;
+                    case 'tool': Display.tool(data.text || '', data.status); break;
+                    case 'text': Display.message(data.text || ''); break;
+                    case 'question': Display.question(data.text || ''); break;
+                    case 'error': Display.errorMsg(data.message || data.text || ''); break;
+                    case 'done': Display.done(); rl.prompt(); break;
+                    default: if (data.text) console.log(data.text);
+                  }
+                } catch { /* skip */ }
+              }
+            }
+          }
+        };
+
+        rl.on('line', async (line) => {
+          const input = line.trim();
+          if (input === '/exit') { console.log(chalk.dim('Chau!\n')); rl.close(); return; }
+          if (input === '/plan') { planMode = true; console.log(chalk.yellow('  [plan mode activado]\n')); rl.prompt(); return; }
+          if (input === '/build') { planMode = false; console.log(chalk.green('  [build mode activado]\n')); rl.prompt(); return; }
+          if (input === '/clear') { console.clear(); rl.prompt(); return; }
+          if (input === '/new') { sessionId = null; console.log(chalk.dim('  [nueva sesión]\n')); rl.prompt(); return; }
+          if (!input) { rl.prompt(); return; }
+
+          await sendAndStream(input);
+        });
+      } catch (e) {
+        Display.errorMsg(e.message);
+        process.exit(1);
+      }
+    });
+
   agentCmd.command('list')
     .description('List running agents and their assigned skills')
     .action(async () => {
