@@ -1,8 +1,0 @@
-Perfecto. He generado el informe mensual de octubre del fondo **Horizonte**. 
-
-El archivo PDF se encuentra en:
-```
-skills/gestion_fondos/reports/informe_Horizonte_2024-10.pdf
-```
-
-El informe contiene el análisis del rendimiento, composición del portafolio y flujos del fondo correspondientes a octubre de 2024. ¿Necesitas que acceda a algún dato específico del informe o requieres algún análisis adicional?
