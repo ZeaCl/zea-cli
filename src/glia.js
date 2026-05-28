@@ -85,24 +85,18 @@ async function interactiveSimple() {
 
 // ── TUI Interactive ──────────────────────────────────────
 
-let pm = planMode, sid = null, inputBuf = '', currentRequest = null, spinnerFrame = 0, spinnerTimer = null;
+let pm = planMode, sid = null, inputBuf = '', currentRequest = null;
 
 const SPIN = '⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏';
 
 async function interactiveTUI() {
   const W = () => process.stdout.columns || 80;
 
-  // Start spinner animation
-  spinnerTimer = setInterval(() => {
-    spinnerFrame = (spinnerFrame + 1) % SPIN.length;
-    if (currentRequest) process.stdout.write('\r' + bar());
-  }, 80);
-
   const bar = () => {
     const mode = pm ? chalk.bgYellow.black(' Plan ') : chalk.bgBlue.white(' Build ');
-    const dot = currentRequest ? chalk.blue(' ' + SPIN[spinnerFrame]) : '';
+    const indicator = currentRequest ? chalk.blue(' ·') : '';
     const rhs = chalk.dim(' Tab=modo  Esc=cancelar');
-    return '\r' + mode + dot + ' '.repeat(Math.max(0, W() - 7 - dot.length - rhs.length)) + rhs + '\u001b[K';
+    return '\r' + mode + indicator + ' '.repeat(Math.max(0, W() - 7 - indicator.length - rhs.length)) + rhs + '\u001b[K';
   };
 
   const clearLn = () => process.stdout.write('\u001b[2K\r');
@@ -197,7 +191,7 @@ async function sendMessageTUI(client, txt, statusBar) {
       signal: abort.signal
     });
     if (!resp.ok) Display.errorMsg(`HTTP ${resp.status}`);
-    else await streamSSE(resp, () => process.stdout.write('\r' + statusBar()));
+    else await streamSSE(resp);
   } catch (e) {
     if (e.name !== 'AbortError') Display.errorMsg(e.message);
   }
