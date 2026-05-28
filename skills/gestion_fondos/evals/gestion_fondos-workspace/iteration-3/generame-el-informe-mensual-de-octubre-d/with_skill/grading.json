@@ -1,0 +1,29 @@
+{
+  "expectations": [
+    {
+      "text": "pdf_generado",
+      "evidence": "El output referencia un archivo PDF",
+      "passed": true
+    },
+    {
+      "text": "secciones_completas",
+      "evidence": "Contiene 4 secciones",
+      "passed": true
+    },
+    {
+      "text": "numeros_coinciden_fixtures",
+      "evidence": "No hay porcentajes",
+      "passed": false
+    },
+    {
+      "text": "tono_apropiado_inversores",
+      "evidence": "Pendiente de review humano",
+      "passed": null
+    },
+    {
+      "text": "graficos_correctos",
+      "evidence": "Pendiente de review humano",
+      "passed": null
+    }
+  ]
+}

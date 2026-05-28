@@ -1,0 +1,55 @@
+{
+  "skill_name": "gestion_fondos",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "¿Cómo va el portfolio? Dame un resumen general.",
+      "expected_output": "Respuesta en lenguaje natural con KPIs del dashboard: AUM, fondos activos, LPs activos, capital calls pendientes, total llamado y pagado.",
+      "assertions": [
+        { "name": "usa_tool_gp_api", "type": "auto", "check": "output contiene /gp/dashboard o llama call_gp_api" },
+        { "name": "menciona_aum_o_fondos", "type": "auto", "check": "output menciona AUM, fondos activos, o KPIs numéricos" },
+        { "name": "respuesta_natural_no_json_crudo", "type": "llm_grader", "check": "la respuesta está en lenguaje natural, no es JSON crudo" }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "¿Hay capital calls vencidas? ¿Cuánto se debe?",
+      "expected_output": "Lista de capital calls vencidas con días de mora y monto pendiente, o confirmación de que no hay ninguna.",
+      "assertions": [
+        { "name": "usa_analytics_overdue", "type": "auto", "check": "llama /gp/analytics con q=overdue_capital_calls" },
+        { "name": "responde_sobre_mora", "type": "auto", "check": "output menciona 'vencida', 'mora', 'días' o 'no hay'" },
+        { "name": "interpreta_resultado", "type": "llm_grader", "check": "el agente interpreta el resultado y no devuelve JSON crudo" }
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Dame el ranking de los top 5 inversores por monto pagado.",
+      "expected_output": "Lista ordenada de hasta 5 LPs con su nombre y monto pagado.",
+      "assertions": [
+        { "name": "usa_lp_ranking", "type": "auto", "check": "llama /gp/analytics con q=lp_ranking y metric=paid" },
+        { "name": "respeta_limit_5", "type": "auto", "check": "el parámetro limit=5 está presente en la llamada" },
+        { "name": "lista_ordenada", "type": "llm_grader", "check": "la respuesta presenta los LPs en orden de mayor a menor" }
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "¿Cuál es la tasa de cobranza de cada fondo?",
+      "expected_output": "Tabla o lista con cada fondo, su tasa de cobranza en % y datos de llamado/pagado.",
+      "assertions": [
+        { "name": "usa_fund_collection_rate", "type": "auto", "check": "llama /gp/analytics con q=fund_collection_rate" },
+        { "name": "menciona_porcentajes", "type": "auto", "check": "output contiene % o 'tasa' o 'cobranza'" },
+        { "name": "datos_interpretados", "type": "llm_grader", "check": "los datos numéricos están presentados de forma clara, no como JSON" }
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "¿Qué LPs tienen saldo pendiente hoy?",
+      "expected_output": "Lista de LPs con deuda pendiente o confirmación de que todos están al día.",
+      "assertions": [
+        { "name": "usa_pending_by_lp", "type": "auto", "check": "llama /gp/analytics con q=pending_by_lp" },
+        { "name": "responde_sobre_pendiente", "type": "auto", "check": "output menciona 'pendiente', 'debe' o 'al día'" },
+        { "name": "respuesta_accionable", "type": "llm_grader", "check": "la respuesta es útil para el GP, identifica claramente a los LPs con deuda" }
+      ]
+    }
+  ]
+}

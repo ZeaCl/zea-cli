@@ -1,0 +1,8 @@
+¡Listo! El informe mensual fue generado exitosamente. Aquí tenés el resumen:
+
+- 📄 **Archivo:** `informe_Horizonte_2024-10.pdf`
+- 📁 **Ubicación:** `skills/gestion_fondos/reports/`
+- 📅 **Período:** Octubre 2024
+- 🏦 **Fondo:** Horizonte
+
+Podés encontrar el PDF en la ruta indicada. ¿Necesitás algo más sobre este informe o algún otro fondo?

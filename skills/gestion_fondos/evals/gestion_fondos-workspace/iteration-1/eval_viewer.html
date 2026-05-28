@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Eval Viewer — </title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 960px; margin: 0 auto; padding: 2rem; }
+    .tabs { display: flex; gap: 1rem; margin-bottom: 2rem; border-bottom: 2px solid #e5e7eb; }
+    .tab { padding: 0.5rem 1rem; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; }
+    .tab.active { border-bottom-color: #3b82f6; color: #3b82f6; font-weight: bold; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .eval-card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; }
+    .eval-card h3 { margin: 0 0 1rem; color: #111827; }
+    .prompt { background: #f9fafb; padding: 1rem; border-radius: 4px; margin-bottom: 1rem; font-size: 0.95rem; }
+    .output { background: #f0fdf4; padding: 1rem; border-radius: 4px; margin-bottom: 0.5rem; white-space: pre-wrap; font-size: 0.9rem; }
+    .baseline-output { background: #fef9c3; }
+    details { margin-top: 0.5rem; }
+    summary { cursor: pointer; color: #6b7280; font-size: 0.9rem; }
+    .assertion { display: flex; gap: 0.5rem; align-items: center; padding: 0.4rem 0; font-size: 0.9rem; }
+    .pass { color: #16a34a; }
+    .fail { color: #dc2626; }
+    .pending { color: #d97706; }
+    textarea { width: 100%; min-height: 80px; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.9rem; box-sizing: border-box; }
+    .feedback-label { font-weight: bold; margin-bottom: 0.5rem; display: block; }
+    .submit-btn { background: #3b82f6; color: white; border: none; padding: 0.75rem 2rem; border-radius: 6px; cursor: pointer; font-size: 1rem; margin-top: 1rem; }
+    .submit-btn:hover { background: #2563eb; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
+    th { background: #f3f4f6; padding: 0.5rem 1rem; text-align: left; font-size: 0.9rem; }
+    td { padding: 0.5rem 1rem; border-bottom: 1px solid #e5e7eb; font-size: 0.9rem; }
+    .good { color: #16a34a; font-weight: bold; }
+    .bad { color: #dc2626; }
+    .warn { color: #d97706; }
+    .analyst { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 1rem; margin-top: 1rem; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <h1>Eval Viewer —  (iteración )</h1>
+
+  <div class="tabs">
+    <div class="tab active" onclick="showTab('outputs')">Outputs</div>
+    <div class="tab" onclick="showTab('benchmark')">Benchmark</div>
+  </div>
+
+  <div id="outputs" class="tab-content active">
+    <div class="eval-card" data-eval-name="cul-fue-el-rendimiento-neto-del-fondo-ho">
+  <h3>cul-fue-el-rendimiento-neto-del-fondo-ho</h3>
+  <div class="prompt">¿Cuál fue el rendimiento neto del fondo Horizonte en octubre 2024?</div>
+
+  <strong>Output (with skill):</strong>
+  <div class="output">Error en la API: Error HTTP 429</div>
+
+  <details>
+    <summary>Output (baseline)</summary>
+    <div class="output baseline-output">Error en la API: Error HTTP 429</div>
+  </details>
+
+  <details><summary>Assertions formales</summary><div class="assertion">
+  <span class="fail">✗</span>
+  <span>contiene_porcentaje</span>
+  <span style="color: #9ca3af; font-size: 0.85rem;">— No se encontró porcentaje</span>
+</div>
+
+<div class="assertion">
+  <span class="fail">✗</span>
+  <span>menciona_benchmark</span>
+  <span style="color: #9ca3af; font-size: 0.85rem;">— Assertion 'menciona_benchmark' no tiene implementación auto — agregar en check_assertion/2</span>
+</div>
+
+<div class="assertion">
+  <span class="fail">✗</span>
+  <span>no_inventa_datos</span>
+  <span style="color: #9ca3af; font-size: 0.85rem;">— Error en grader LLM</span>
+</div>
+</details>
+
+  <div style="margin-top: 1rem;">
+    <label class="feedback-label">Feedback:</label>
+    <textarea
+      oninput="saveFeedback('cul-fue-el-rendimiento-neto-del-fondo-ho', this.value)"
+      placeholder="¿Qué cambiarías? ¿Qué falta? Dejalo vacío si está bien."
+    ></textarea>
+  </div>
+</div>
+
+<div class="eval-card" data-eval-name="generame-el-informe-mensual-de-octubre-d">
+  <h3>generame-el-informe-mensual-de-octubre-d</h3>
+  <div class="prompt">Generame el informe mensual de octubre del fondo Horizonte</div>
+
+  <strong>Output (with skill):</strong>
+  <div class="output">Error en la API: Error HTTP 429</div>
+
+  <details>
+    <summary>Output (baseline)</summary>
+    <div class="output baseline-output">Error en la API: Error HTTP 429</div>
+  </details>
+
+  <details><summary>Assertions formales</summary><div class="assertion">
+  <span class="fail">✗</span>
+  <span>pdf_generado</span>
+  <span style="color: #9ca3af; font-size: 0.85rem;">— No se encontró referencia a PDF</span>
+</div>
+
+<div class="assertion">
+  <span class="fail">✗</span>
+  <span>secciones_completas</span>
+  <span style="color: #9ca3af; font-size: 0.85rem;">— Assertion 'secciones_completas' no tiene implementación auto — agregar en check_assertion/2</span>
+</div>
+
+<div class="assertion">
+  <span class="fail">✗</span>
+  <span>numeros_coinciden_fixtures</span>
+  <span style="color: #9ca3af; font-size: 0.85rem;">— Assertion 'numeros_coinciden_fixtures' no tiene implementación auto — agregar en check_assertion/2</span>
+</div>
+
+<div class="assertion">
+  <span class="pending">?</span>
+  <span>tono_apropiado_inversores</span>
+  <span style="color: #9ca3af; font-size: 0.85rem;">— Pendiente de review humano</span>
+</div>
+
+<div class="assertion">
+  <span class="pending">?</span>
+  <span>graficos_correctos</span>
+  <span style="color: #9ca3af; font-size: 0.85rem;">— Pendiente de review humano</span>
+</div>
+</details>
+
+  <div style="margin-top: 1rem;">
+    <label class="feedback-label">Feedback:</label>
+    <textarea
+      oninput="saveFeedback('generame-el-informe-mensual-de-octubre-d', this.value)"
+      placeholder="¿Qué cambiarías? ¿Qué falta? Dejalo vacío si está bien."
+    ></textarea>
+  </div>
+</div>
+
+<div class="eval-card" data-eval-name="qu-fondos-tienen-mayor-exposicin-a-renta">
+  <h3>qu-fondos-tienen-mayor-exposicin-a-renta</h3>
+  <div class="prompt">¿Qué fondos tienen mayor exposición a renta variable?</div>
+
+  <strong>Output (with skill):</strong>
+  <div class="output">Error en la API: Error HTTP 429</div>
+
+  <details>
+    <summary>Output (baseline)</summary>
+    <div class="output baseline-output">Error en la API: Error HTTP 429</div>
+  </details>
+
+  <details><summary>Assertions formales</summary><div class="assertion">
+  <span class="fail">✗</span>
+  <span>contiene_lista_fondos</span>
+  <span style="color: #9ca3af; font-size: 0.85rem;">— Assertion 'contiene_lista_fondos' no tiene implementación auto — agregar en check_assertion/2</span>
+</div>
+
+<div class="assertion">
+  <span class="fail">✗</span>
+  <span>ordena_por_exposicion</span>
+  <span style="color: #9ca3af; font-size: 0.85rem;">— Assertion 'ordena_por_exposicion' no tiene implementación auto — agregar en check_assertion/2</span>
+</div>
+
+<div class="assertion">
+  <span class="fail">✗</span>
+  <span>datos_coherentes_fixtures</span>
+  <span style="color: #9ca3af; font-size: 0.85rem;">— Error en grader LLM</span>
+</div>
+</details>
+
+  <div style="margin-top: 1rem;">
+    <label class="feedback-label">Feedback:</label>
+    <textarea
+      oninput="saveFeedback('qu-fondos-tienen-mayor-exposicin-a-renta', this.value)"
+      placeholder="¿Qué cambiarías? ¿Qué falta? Dejalo vacío si está bien."
+    ></textarea>
+  </div>
+</div>
+
+    <button class="submit-btn" onclick="submitReviews()">Submit All Reviews</button>
+  </div>
+
+  <div id="benchmark" class="tab-content">
+    <h2>Resumen</h2>
+<table>
+  <tr><th>Configuración</th><th>Pass Rate</th></tr>
+  
+</table>
+
+<h2>Por Eval</h2>
+<table>
+  <tr><th>Eval</th><th>With Skill</th><th>Baseline</th><th>Discrimina</th></tr>
+  
+</table>
+
+<div class="analyst">
+  <strong>Observaciones:</strong> 
+</div>
+
+  </div>
+
+  <script>
+    function showTab(name) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(name).classList.add('active');
+      event.target.classList.add('active');
+    }
+
+    function saveFeedback(evalName, value) {
+      localStorage.setItem('feedback_' + evalName, value);
+    }
+
+    function submitReviews() {
+      const reviews = [];
+      document.querySelectorAll('[data-eval-name]').forEach(el => {
+        const evalName = el.dataset.evalName;
+        const feedback = localStorage.getItem('feedback_' + evalName) || '';
+        reviews.push({ run_id: evalName + '-with_skill', feedback, timestamp: new Date().toISOString() });
+      });
+      const blob = new Blob([JSON.stringify({ reviews, status: 'complete' }, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'feedback.json';
+      a.click();
+    }
+  </script>
+</body>
+</html>

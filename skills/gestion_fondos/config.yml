@@ -1,0 +1,7 @@
+# Configuración de la GP API REST
+# Agregar al .env del agente:
+#   GP_API_URL=http://localhost:4081
+#   GP_API_KEY=sk_live_...
+
+api_url: ${GP_API_URL}
+api_key: ${GP_API_KEY}

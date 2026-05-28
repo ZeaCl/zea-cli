@@ -1,0 +1,29 @@
+{
+  "expectations": [
+    {
+      "text": "pdf_generado",
+      "evidence": "No se encontró referencia a PDF",
+      "passed": false
+    },
+    {
+      "text": "secciones_completas",
+      "evidence": "Assertion 'secciones_completas' no tiene implementación auto — agregar en check_assertion/2",
+      "passed": false
+    },
+    {
+      "text": "numeros_coinciden_fixtures",
+      "evidence": "Assertion 'numeros_coinciden_fixtures' no tiene implementación auto — agregar en check_assertion/2",
+      "passed": false
+    },
+    {
+      "text": "tono_apropiado_inversores",
+      "evidence": "Pendiente de review humano",
+      "passed": null
+    },
+    {
+      "text": "graficos_correctos",
+      "evidence": "Pendiente de review humano",
+      "passed": null
+    }
+  ]
+}

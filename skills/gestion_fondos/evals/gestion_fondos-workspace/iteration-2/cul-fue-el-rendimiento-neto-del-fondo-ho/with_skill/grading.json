@@ -1,0 +1,19 @@
+{
+  "expectations": [
+    {
+      "text": "contiene_porcentaje",
+      "evidence": "No se encontró porcentaje",
+      "passed": false
+    },
+    {
+      "text": "menciona_benchmark",
+      "evidence": "No menciona benchmark",
+      "passed": false
+    },
+    {
+      "text": "no_inventa_datos",
+      "evidence": "Error en grader LLM",
+      "passed": false
+    }
+  ]
+}

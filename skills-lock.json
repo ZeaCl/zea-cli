@@ -6,6 +6,66 @@
       "sourceType": "github",
       "skillPath": "skills/zea/SKILL.md",
       "computedHash": "f69e6d0be51c4337d3bada769fe9896bf1a1cd6f9c05719b9375a0ab95d28e70"
+    },
+    "sensor": {
+      "source": "ZeaCl/zea-agent-skill",
+      "sourceType": "github",
+      "skillPath": "skills/sensor/SKILL.md",
+      "computedHash": "pending"
+    },
+    "design": {
+      "source": "ZeaCl/zea-agent-skill",
+      "sourceType": "github",
+      "skillPath": "skills/design/SKILL.md",
+      "computedHash": "pending"
+    },
+    "doctor": {
+      "source": "ZeaCl/zea-agent-skill",
+      "sourceType": "github",
+      "skillPath": "skills/doctor/SKILL.md",
+      "computedHash": "pending"
+    },
+    "gestion_fondos": {
+      "source": "ZeaCl/zea-agent-skill",
+      "sourceType": "github",
+      "skillPath": "skills/gestion_fondos/SKILL.md",
+      "computedHash": "pending"
+    },
+    "ops": {
+      "source": "ZeaCl/zea-agent-skill",
+      "sourceType": "github",
+      "skillPath": "skills/ops/SKILL.md",
+      "computedHash": "pending"
+    },
+    "orchestrate": {
+      "source": "ZeaCl/zea-agent-skill",
+      "sourceType": "github",
+      "skillPath": "skills/orchestrate/SKILL.md",
+      "computedHash": "pending"
+    },
+    "sdui": {
+      "source": "ZeaCl/zea-agent-skill",
+      "sourceType": "github",
+      "skillPath": "skills/sdui/SKILL.md",
+      "computedHash": "pending"
+    },
+    "sudlich": {
+      "source": "ZeaCl/zea-agent-skill",
+      "sourceType": "github",
+      "skillPath": "skills/sudlich/SKILL.md",
+      "computedHash": "pending"
+    },
+    "venture": {
+      "source": "ZeaCl/zea-agent-skill",
+      "sourceType": "github",
+      "skillPath": "skills/venture/SKILL.md",
+      "computedHash": "pending"
+    },
+    "zea_ops": {
+      "source": "ZeaCl/zea-agent-skill",
+      "sourceType": "github",
+      "skillPath": "skills/zea_ops/SKILL.md",
+      "computedHash": "pending"
     }
   }
 }

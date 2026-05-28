@@ -1,0 +1,20 @@
+[
+  {
+    "name": "call_gp_api",
+    "description": "Llama a un endpoint de la GP API REST. OBLIGATORIO - Usar exactamente estas rutas: /gp/dashboard (AUM, KPIs), /gp/funds (listar), /gp/funds/:id (detalle), /gp/funds/:id/lps (LPs), /gp/capital-calls, /gp/payments, /gp/analytics?q=pending_by_lp (deudas), /gp/analytics?q=overdue_capital_calls (vencidas), /gp/analytics?q=fund_collection_rate (cobranza), /gp/analytics?q=lp_ranking&metric=paid (ranking)",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "endpoint": {
+          "type": "string",
+          "description": "Ruta del endpoint"
+        },
+        "params": {
+          "type": "object",
+          "description": "Query parameters opcionales"
+        }
+      },
+      "required": ["endpoint"]
+    }
+  }
+]

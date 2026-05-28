@@ -1,0 +1,19 @@
+{
+  "expectations": [
+    {
+      "text": "contiene_lista_fondos",
+      "evidence": "Assertion 'contiene_lista_fondos' no tiene implementación auto — agregar en check_assertion/2",
+      "passed": false
+    },
+    {
+      "text": "ordena_por_exposicion",
+      "evidence": "Assertion 'ordena_por_exposicion' no tiene implementación auto — agregar en check_assertion/2",
+      "passed": false
+    },
+    {
+      "text": "datos_coherentes_fixtures",
+      "evidence": "Error en grader LLM",
+      "passed": false
+    }
+  ]
+}
