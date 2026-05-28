@@ -1,11 +1,76 @@
 import { getClient } from '../client.js';
 import { withLearning, readJSON } from '../utils/learning.js';
+import * as Display from '../utils/display.js';
+import chalk from 'chalk';
 import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
 
 export function register(program) {
   const agentCmd = program.command('agent').description('Agent management (Glia/ReactAgent)');
+
+  agentCmd.command('chat <message>')
+    .description('Chat directly with Glia agent (SSE streaming)')
+    .option('--plan', 'Plan mode (solo análisis, no ejecuta cambios)')
+    .option('--backend <name>', 'Agent backend: opencode (default) o react')
+    .action(async (message, options) => {
+      try {
+        const client = await getClient();
+        const backend = options.backend || 'opencode';
+        const planMode = options.plan || false;
+
+        console.log(chalk.dim(`Glia (${backend}) — conectando...\n`));
+
+        const response = await fetch(`${client.gliaUrl}/api/agent/chat`, {
+          method: 'POST',
+          headers: client.headers,
+          body: JSON.stringify({ text: message, plan_mode: planMode })
+        });
+
+        if (!response.ok) {
+          Display.errorMsg(`HTTP ${response.status}`);
+          process.exit(1);
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let eventType = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            if (line.startsWith('event: ')) {
+              eventType = line.slice(7).trim();
+            } else if (line.startsWith('data: ')) {
+              const jsonStr = line.slice(6);
+              try {
+                const data = JSON.parse(jsonStr);
+                switch (eventType) {
+                  case 'reasoning': Display.reasoning(data.text || ''); break;
+                  case 'tool': Display.tool(data.text || '', data.status); break;
+                  case 'text': Display.message(data.text || ''); break;
+                  case 'question': Display.question(data.text || ''); break;
+                  case 'error': Display.errorMsg(data.message || data.text || ''); break;
+                  case 'done': Display.done(); break;
+                  default: if (data.text) console.log(data.text);
+                }
+              } catch { /* skip malformed JSON */ }
+            }
+          }
+        }
+        process.exit(0);
+      } catch (e) {
+        Display.errorMsg(e.message);
+        process.exit(1);
+      }
+    });
 
   agentCmd.command('list')
     .description('List running agents and their assigned skills')
