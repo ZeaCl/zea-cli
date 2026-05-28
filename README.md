@@ -1,22 +1,56 @@
 # ZEA Platform Agent Skill
 
-This repository contains the official agent skill, CLI tool, and Model Context Protocol (MCP) server for **ZEA Platform**, the infrastructure platform designed for AI coding agents.
+CLI tools, agent skills, and MCP server for **ZEA Platform** — the infrastructure platform for AI coding agents.
 
-Adding this skill to your AI coding agents (such as Claude Code, Cursor, Windsurf, or Copilot) allows them to authenticate, manage personal access tokens (PATs), switch organizations, and interact with all ZEA Platform features.
+Adding this skill to your AI coding agents (Claude Code, Cursor, Windsurf, Copilot, opencode) allows them to authenticate, manage tokens, and interact with all ZEA Platform features.
 
 ## Installation
 
-You can install this skill globally or within your project:
-
+### Rápida (todo junto)
 ```bash
-npx skills add ZeaCl/zea-agent-skill
+curl -fsSL https://raw.githubusercontent.com/ZeaCl/zea-agent-skill/main/install.sh | bash
 ```
 
-And install the CLI tool globally:
-
+### Solo CLI (zea + glia)
 ```bash
 npm install -g @zea-cl/cli
 ```
+
+### Solo skills (para agentes)
+```bash
+npx skills add ZeaCl/zea-agent-skill --yes --global
+```
+
+## Quick Start
+
+```bash
+# Chat con Glia
+glia "¿Cuántos fondos hay?"
+
+# Chat interactivo
+glia
+
+# Plan mode
+glia --plan "Planificá cómo cambiar el color"
+
+# Backend React (sin opencode)
+glia --react "Hola"
+```
+
+## Skills disponibles
+
+| Skill | Descripción |
+|-------|-------------|
+| `zea` | Umbrella — documentación completa |
+| `app` | Crear, registrar y modificar apps |
+| `design` | Importar screens Stitch, cambiar colores |
+| `venture` | Fondos, capital calls, investors |
+| `sdui` | Manifiestos, estados, intents |
+| `doctor` | Diagnóstico 7 capas |
+| `agent` | Gestión de agentes Glia |
+| `workflow` | Cerebelum workflows |
+| `sensor` | Audio transcription |
+| `orchestrate` | Planificador autónomo |
 
 ## CLI Usage
 
