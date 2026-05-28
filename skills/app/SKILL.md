@@ -81,3 +81,46 @@ Este archivo es el **source of truth**. Si la DB se pierde, se registra de nuevo
 ```bash
 zea app register ~/.zea/platform/apps/<app_id>/manifest.json
 ```
+
+## Ver la app
+
+Cuando el usuario pida "ver la app", "mostrame la app", "abrir la app", seguí este flujo:
+
+### 1. Verificar que la app funciona
+```bash
+node /workspace/zea-cli/src/index.js doctor check
+```
+
+### 2. Si el doctor falla
+- Reportá qué capa falló (api, auth, venture, skills, etc.)
+- Si el fallo es crítico: `doctor check --fix`
+- Si no se puede reparar: explicar al usuario qué servicio no responde
+
+### 3. Si todo OK
+La app está disponible en:
+```
+http://sudlich.zea.localhost/
+```
+
+### 4. Instrucciones para el usuario
+- Abrí `http://sudlich.zea.localhost/` en tu navegador
+- Login: `c@zea.cl` / `demo1234`
+- Vas a ver el Dashboard con sidebar, KPI cards y chat del asistente
+
+### 5. Si es producción (no local)
+```
+https://sudlich.zea.cl/
+```
+
+## Ver preview de experiment
+
+Cuando el usuario pida "ver el experimento X":
+```bash
+# 1. Verificar que existe
+node /workspace/zea-cli/src/index.js experiment list --app <app_id>
+
+# 2. URL de preview
+http://sudlich.zea.localhost/app?app_id=<app_id>__exp_<nombre>
+
+# 3. IMPORTANTE: no mergear hasta aprobación humana explícita
+```
