@@ -15,7 +15,7 @@ echo "   node $(node -v)"
 
 # 1. CLI (zea + glia)
 echo "   📦 Instalando CLI..."
-npm install -g @zea-cl/cli 2>/dev/null && echo "   ✅ zea + glia instalados" || echo "   ⚠️  npm install falló, probá manualmente"
+npm install -g github:ZeaCl/zea-agent-skill 2>/dev/null && echo "   ✅ zea + glia instalados" || echo "   ⚠️  npm install falló, probá: npm install -g github:ZeaCl/zea-agent-skill"
 
 # 2. Agent skills (si npx skills está disponible)
 if command -v npx &> /dev/null; then

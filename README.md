@@ -13,7 +13,7 @@ curl -fsSL https://raw.githubusercontent.com/ZeaCl/zea-agent-skill/main/install.
 
 ### Solo CLI (zea + glia)
 ```bash
-npm install -g @zea-cl/cli
+npm install -g github:ZeaCl/zea-agent-skill
 ```
 
 ### Solo skills (para agentes)
