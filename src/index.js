@@ -40,7 +40,7 @@ import { register as registerImprove } from './commands/improve.js';
 import { register as registerOrchestrate } from './commands/orchestrate.js';
 import { register as registerSession } from './commands/session.js';
 import { register as registerWs } from './commands/ws_server.js';
-
+import { register as registerXlsx } from './commands/xlsx.js';
 const program = new Command();
 
 program
@@ -79,7 +79,7 @@ registerImprove(program);
 registerOrchestrate(program);
 registerSession(program);
 registerWs(program);
-program.command('mcp')
+registerXlsx(program);program.command('mcp')
   .description('Start Model Context Protocol (MCP) server')
   .action(async () => {
     try {
