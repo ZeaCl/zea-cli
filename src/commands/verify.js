@@ -34,23 +34,23 @@ export function register(program) {
 
       // 1. Venture API endpoints
       try {
-        const dashboard = execSync("curl -s --max-time 5 http://venture-api:4081/gp/dashboard 2>/dev/null", { encoding: 'utf8', timeout: 7000 });
+        const dashboard = execSync("curl -s --max-time 5 http://venture-api:4081/gp/dashboard 2>/dev/null || echo '{}'", { encoding: 'utf8', timeout: 7000 });
         results.checks.dashboard = dashboard.includes('active_funds') ? 'ok' : 'fail';
       } catch (e) { results.checks.dashboard = 'unreachable'; }
 
       try {
-        const funds = execSync("curl -s --max-time 5 http://venture-api:4081/gp/funds 2>/dev/null", { encoding: 'utf8', timeout: 7000 });
+        const funds = execSync("curl -s --max-time 5 http://venture-api:4081/gp/funds 2>/dev/null || echo '{}'", { encoding: 'utf8', timeout: 7000 });
         results.checks.funds = funds.includes('name') ? 'ok' : 'fail';
       } catch (e) { results.checks.funds = 'unreachable'; }
 
       try {
-        const investors = execSync("curl -s --max-time 5 http://venture-api:4081/gp/investors 2>/dev/null", { encoding: 'utf8', timeout: 7000 });
+        const investors = execSync("curl -s --max-time 5 http://venture-api:4081/gp/investors 2>/dev/null || echo '{}'", { encoding: 'utf8', timeout: 7000 });
         results.checks.investors = investors.includes('name') ? 'ok' : 'fail';
       } catch (e) { results.checks.investors = 'unreachable'; }
 
       // 2. Manifest
       try {
-        const m = execSync(`curl -s --max-time 5 http://apps.zea.localhost/api/apps/${opts.app}/manifest 2>/dev/null`, { encoding: 'utf8', timeout: 7000 });
+        const m = execSync(`curl -s --max-time 5 http://zea-apps:4007/api/apps/${opts.app}/manifest 2>/dev/null || echo '{}'`, { encoding: 'utf8', timeout: 7000 });
         const manifest = JSON.parse(m);
         const states = Object.keys(manifest.states || {});
         const intents = Object.keys(manifest.intent_routing || {});

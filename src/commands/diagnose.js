@@ -43,13 +43,13 @@ export function register(program) {
 
       // 2. Venture API
       try {
-        const v = execSync("curl -s --max-time 5 http://venture.zea.localhost/gp/dashboard 2>/dev/null || echo '{}'", { encoding: 'utf8', timeout: 7000 });
+        const v = execSync("curl -s --max-time 5 http://venture-api:4081/gp/dashboard 2>/dev/null || echo '{}'", { encoding: 'utf8', timeout: 7000 });
         results.venture_api = v.includes('active_funds') ? 'healthy' : 'unhealthy';
       } catch (e) { results.venture_api = 'unreachable'; }
 
       // 3. ZEA Apps
       try {
-        const a = execSync('curl -s --max-time 5 http://apps.zea.localhost/api/apps/sudlich_ventures/manifest 2>/dev/null | head -c 50', { encoding: 'utf8', timeout: 7000 });
+        const a = execSync('curl -s --max-time 5 http://zea-apps:4007/api/apps/sudlich_ventures/manifest 2>/dev/null | head -c 50', { encoding: 'utf8', timeout: 7000 });
         results.zea_apps = a.includes('error') || !a ? 'unhealthy' : 'healthy';
       } catch (e) { results.zea_apps = 'unreachable'; }
 
