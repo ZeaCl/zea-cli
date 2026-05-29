@@ -5,6 +5,7 @@ import chalk from 'chalk';
 import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
+import { execSync } from 'child_process';
 
 export function register(program) {
   const agentCmd = program.command('agent').description('Agent management (Glia/ReactAgent)');
@@ -700,5 +701,12 @@ export function register(program) {
       } catch (e) {
         console.error('Error:', e.message);
       }
+    });
+
+  agentCmd.command("status")
+    .description("Show agent status: client, maintenance, coach, quality, all")
+    .argument("[agent]", "agent to check", "all")
+    .action(async (agent) => {
+      console.log(execSync(`bash ~/.zea/scripts/agent_dashboard.sh ${agent}`, { encoding: 'utf8' }));
     });
 }
