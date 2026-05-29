@@ -247,22 +247,67 @@ export function register(program) {
         console.log(`[2/5] Analyzing HTML (${html.length} bytes)...`);
 
         if (opts.llm) {
-          const userPrompt = `Analizá esta pantalla y devolvé el JSON con injection_points para functionalizarla:\n\nTITLE: ${opts.screen}\nHTML (${html.length} bytes):\n${html.slice(0, 10000)}`;
-          analysis = await callLLM(SYSTEM_PROMPT, userPrompt);
+          const userPrompt = `TOMÁ este HTML de una pantalla Stitch y DEVOLVÉ el HTML COMPLETO con data-zea-bind inyectado en cada valor dinámico.
+
+REGLAS:
+- NO modifiques la estructura del HTML. SOLO agregá atributos data-zea-bind.
+- Cada KPI, métrica, fila de tabla y valor dinámico debe tener data-zea-bind.
+- Usá nombres cortos en inglés/español para los bindings (ej: aum, active_funds, funds, lps).
+- Para tablas: agregá data-zea-bind="nombre_array" en cada <tr> del <tbody>.
+- NO cambies clases CSS, estilos ni estructura.
+- Devolvé el HTML COMPLETO (no resumido, no truncado).
+
+TITLE: ${opts.screen}
+HTML (${html.length} bytes):
+${html.slice(0, 12000)}
+
+Devolvé SOLO este JSON:
+{
+  "type": "dashboard"|"list"|"form"|"detail",
+  "injected_html": "EL HTML COMPLETO CON data-zea-bind YA INYECTADO",
+  "bindings_added": ["aum", "active_funds", ...],
+  "suggested_intents": [...]
+}`;
+
+          const funcPrompt = `Sos un experto en inyectar data-zea-bind en HTML de pantallas Stitch para ZEA Platform.
+
+APIs disponibles:
+- GET /gp/dashboard → {active_funds, active_lps, aum, pending_capital_calls, total_called, total_paid}
+- GET /gp/funds → [{id, name, type, status, total_size, currency}]
+- GET /gp/investors → [{id, name, email, investor_type}]
+- GET /gp/capital-calls → [{id, fund_name, total_amount, status, issue_date, due_date}]
+
+El data-zea-bind se pone como atributo HTML. El cliente JS busca [data-zea-bind] y reemplaza el contenido con datos de la API.
+Para tablas: <tr data-zea-bind="funds"> itera sobre el array, y cada <td> puede tener data-zea-bind="name", data-zea-bind="status".
+
+Devolvé el HTML COMPLETO con los bindings inyectados. NO resumas, NO truncues.`;
+          
+          analysis = await callLLM(funcPrompt, userPrompt);
         } else {
           analysis = { type: analyzeRegex(html).screenType, injection_points: [], suggested_intents: [] };
         }
 
-        // 3. Inject bindings
+        // 3. Inject bindings — LLM returns full modified HTML
         console.log(`[3/5] Injecting data-zea-bind...`);
         let bindings = 0;
 
-        if (analysis.injection_points?.length > 0) {
+        if (analysis.injected_html && opts.llm) {
+          // LLM returned the full HTML with bindings already injected
+          const newBinds = (analysis.injected_html.match(/data-zea-bind="([^"]+)"/g) || []);
+          const oldBinds = (html.match(/data-zea-bind="([^"]+)"/g) || []);
+          bindings = newBinds.length - oldBinds.length;
+          if (bindings > 0) {
+            html = analysis.injected_html;
+            const bindNames = [...new Set(newBinds.map(b => b.match(/"([^"]+)"/)[1]))];
+            console.log(`   ✅ LLM injected ${bindings} bindings: ${bindNames.join(', ')}`);
+          } else {
+            console.log(`   ⚠️  LLM returned same number of bindings — no changes`);
+          }
+        } else if (analysis.injection_points?.length > 0) {
+          // Regex fallback: try exact selector matching
           for (const ip of analysis.injection_points) {
             if (html.includes(ip.html_selector) && !html.includes(`data-zea-bind="${ip.data_bind}"`)) {
-              if (ip.action === 'wrap_span') {
-                html = html.replace(`>${ip.html_selector}<`, ` data-zea-bind="${ip.data_bind}">${ip.html_selector}<`);
-              } else if (ip.action === 'replace_text') {
+              if (ip.action === 'wrap_span' || ip.action === 'replace_text') {
                 html = html.replace(`>${ip.html_selector}<`, ` data-zea-bind="${ip.data_bind}">${ip.html_selector}<`);
               } else if (ip.action === 'add_to_tr') {
                 html = html.replace(/<tr([^>]*)class="([^"]*)"/, (m, a, c) => `<tr${a}class="${c}" data-zea-bind="${ip.data_bind}"`);
@@ -274,7 +319,7 @@ export function register(program) {
             }
           }
         } else {
-          // Regex fallback for dashboard
+          // Fallback for old format analysis
           const a = analyzeRegex(html);
           if (a.screenType === 'dashboard') {
             for (const [text, bind] of [['AUM Total', 'aum'], ['Fondos Activos', 'active_funds']]) {
