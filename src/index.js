@@ -34,6 +34,7 @@ import { register as registerDb } from './commands/db.js';
 import { register as registerDiagnose } from './commands/diagnose.js';
 import { register as registerConfig } from './commands/config.js';
 import { register as registerVerify } from './commands/verify.js';
+import { register as registerQa } from './commands/qa.js';
 
 const program = new Command();
 
@@ -67,6 +68,7 @@ registerDb(program);
 registerDiagnose(program);
 registerConfig(program);
 registerVerify(program);
+registerQa(program);
 
 program.command('mcp')
   .description('Start Model Context Protocol (MCP) server')
