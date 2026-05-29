@@ -150,25 +150,22 @@ export function register(program) {
         });
         if (!uResp.ok) throw new Error(`Manifest update failed: ${uResp.status}`);
 
-        // 4. Update memory
-        console.log(`5/5 Updating memory...`);
-        mem.screen_mappings = mem.screen_mappings || {};
-        mem.screen_mappings[opts.state] = {
-          stitch_id: opts.screenId,
-          state: opts.state,
-          intent: opts.intent,
-          html_bytes: contentHtml.length,
-          imported_at: new Date().toISOString()
-        };
-        mem.last_sync = new Date().toISOString();
-        await writeMemory(opts.app, 'stitch.json', mem);
-
-        console.log(`\n✅ Screen imported:`);
-        console.log(`   App:     ${opts.app}`);
-        console.log(`   State:   ${opts.state}`);
-        console.log(`   Intent:  ${opts.intent}`);
-        console.log(`   HTML:    ${contentHtml.length} bytes`);
-        console.log(`   Memory:  updated`);
+        // 4. Update memory (non-blocking — best effort)
+        try {
+          mem.screen_mappings = mem.screen_mappings || {};
+          mem.screen_mappings[opts.state] = {
+            stitch_id: opts.screenId,
+            state: opts.state,
+            intent: opts.intent,
+            html_bytes: contentHtml.length,
+            imported_at: new Date().toISOString()
+          };
+          mem.last_sync = new Date().toISOString();
+          await writeMemory(opts.app, 'stitch.json', mem);
+          console.log(`   Memory:  updated`);
+        } catch (e) {
+          console.log(`   Memory:  skipped (no write access)`);
+        }
 
         }, { screen_id: opts.screenId, state: opts.state, intent: opts.intent });
 
@@ -179,13 +176,16 @@ export function register(program) {
 
   // --- status ---
   designCmd.command('status')
-    .description('Show import status for an app')
+    .description('Show import status for an app (reads from API)')
     .requiredOption('--app <id>', 'App ID')
     .action(async (opts) => {
       try {
-        const mem = await readMemory(opts.app, 'stitch.json');
-        const mappings = mem?.screen_mappings || {};
-        const entries = Object.entries(mappings);
+        const client = await getClient();
+        const resp = await fetch(`${client.appsUrl}/api/apps/${opts.app}/manifest`, { headers: client.headers });
+        if (!resp.ok) throw new Error(`API error: ${resp.status}`);
+        const manifest = await resp.json();
+        const states = manifest.states || {};
+        const entries = Object.entries(states);
 
         if (entries.length === 0) {
           console.log('No screens imported yet.');
@@ -193,17 +193,36 @@ export function register(program) {
         }
 
         console.log(`App: ${opts.app}`);
-        console.log(`Project: ${mem.project_id}\n`);
-        for (const [state, info] of entries) {
-          console.log(`  ${state}`);
-          console.log(`    Stitch: ${info.stitch_id}`);
-          console.log(`    Intent: ${info.intent}`);
-          console.log(`    HTML:   ${info.html_bytes} bytes`);
-          console.log(`    Date:   ${info.imported_at}`);
+        console.log(`States: ${entries.length}\n`);
+        for (const [name, state] of entries) {
+          const htmlSize = (state.html || '').length;
+          console.log(`  ${name}`);
+          console.log(`    Type: ${state.type || '?'}`);
+          console.log(`    HTML: ${htmlSize} bytes`);
+          if (state.type === 'StitchedScreen') {
+            const binds = (state.html || '').match(/data-zea-bind="([^"]+)"/g) || [];
+            console.log(`    Bindings: ${binds.length > 0 ? [...new Set(binds.map(b => b.match(/"([^"]+)"/)[1]))].join(', ') : 'none'}`);
+          }
           console.log('');
         }
       } catch (e) {
-        console.error('Error:', e.message);
+        // Fallback: try local memory
+        try {
+          const mem = await readMemory(opts.app, 'stitch.json');
+          const mappings = mem?.screen_mappings || {};
+          const entries = Object.entries(mappings);
+          if (entries.length === 0) {
+            console.log('No screens imported yet.');
+            return;
+          }
+          console.log(`App: ${opts.app} (from local memory)`);
+          console.log(`Project: ${mem.project_id}\n`);
+          for (const [state, info] of entries) {
+            console.log(`  ${state}: ${info.stitch_id} → ${info.intent} (${info.html_bytes} bytes)`);
+          }
+        } catch {
+          console.error('Error:', e.message);
+        }
       }
     });
 

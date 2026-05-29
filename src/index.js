@@ -28,6 +28,7 @@ import { register as registerShell } from './commands/shell.js';
 import { register as registerLearn } from './commands/learn.js';
 import { register as registerExperiment } from './commands/experiment.js';
 import { register as registerGlia } from './commands/glia.js';
+import { register as registerScreen } from './commands/screen.js';
 
 const program = new Command();
 
@@ -55,6 +56,7 @@ registerShell(program);
 registerLearn(program);
 registerExperiment(program);
 registerGlia(program);
+registerScreen(program);
 
 program.command('mcp')
   .description('Start Model Context Protocol (MCP) server')
