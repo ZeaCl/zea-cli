@@ -1,15 +1,169 @@
 import { getClient } from '../client.js';
 import chalk from 'chalk';
-import fs from 'fs/promises';
+
+const DEEPSEEK_API = 'https://api.deepseek.com/v1/chat/completions';
+const DEEPSEEK_MODEL = 'deepseek-chat';
+const DEEPSEEK_KEY = process.env.DEEPSEEK_API_KEY || process.env.DEEPSEEK_API_KEYS;
+
+const API_CATALOG = {
+  'GET /gp/dashboard': {
+    description: 'Dashboard KPIs del General Partner',
+    returns: { active_funds: 'int — cantidad de fondos activos', active_lps: 'int — cantidad de LPs activos', aum: 'string — Assets Under Management formateado', pending_capital_calls: 'int — capital calls pendientes', total_called: 'string — total llamado', total_paid: 'string — total pagado' }
+  },
+  'GET /gp/funds': {
+    description: 'Lista de fondos del GP',
+    returns: '[{ id: "uuid", name: "string", type: "VENTURE_CAPITAL|REAL_ESTATE|PRIVATE_EQUITY|HEDGE_FUND", status: "DRAFT|FUNDRAISING|ACTIVE|INVESTING|HARVESTING|LIQUIDATED|WIND_DOWN|CLOSED", total_size: "int (cents)", currency: "USD|CLP", created_at: "ISO date" }]'
+  },
+  'GET /gp/investors': {
+    description: 'Lista de inversores (LPs)',
+    returns: '[{ id: "uuid", name: "string", email: "string", investor_type: "INDIVIDUAL|INSTITUTIONAL|CORPORATE|FAMILY_OFFICE", is_active: "bool", created_at: "ISO date" }]'
+  },
+  'GET /gp/capital-calls': {
+    description: 'Lista de capital calls',
+    returns: '[{ id: "uuid", fund_name: "string", call_number: "int", total_amount: "int (cents)", currency: "string", status: "DRAFT|PENDING|SENT|PARTIALLY_PAID|PAID|OVERDUE|CANCELLED", issue_date: "ISO date", due_date: "ISO date" }]'
+  },
+  'POST /gp/funds': {
+    description: 'Crear un fondo nuevo',
+    body: '{ name: "string (required)", type: "VENTURE_CAPITAL|REAL_ESTATE|PRIVATE_EQUITY|HEDGE_FUND", total_size: "int (cents)", currency: "USD|CLP", status: "DRAFT|FUNDRAISING|ACTIVE" }'
+  },
+  'POST /gp/investors': {
+    description: 'Registrar un nuevo inversor',
+    body: '{ name: "string (required)", email: "string (required)", investor_type: "INDIVIDUAL|INSTITUTIONAL|CORPORATE|FAMILY_OFFICE", is_qualified_investor: "bool" }'
+  },
+  'POST /gp/capital-calls': {
+    description: 'Crear un capital call',
+    body: '{ fund_id: "uuid (required)", total_amount: "int (cents)", issue_date: "ISO date", due_date: "ISO date", call_number: "int" }'
+  }
+};
+
+const SYSTEM_PROMPT = `Sos un analizador experto de pantallas Stitch para Venture Capital / Private Equity en ZEA Platform.
+
+CONTEXTO DE LA PLATAFORMA:
+- Las pantallas son HTML generado por Stitch (Google Design-to-Code) a partir de prompts de diseño
+- Cada pantalla se almacena como un estado SDUI con type: "StitchedScreen" y el HTML crudo
+- Para hacerlas funcionales, se inyectan atributos data-zea-bind="ruta.al.dato" en el HTML
+- El cliente (browser) recibe los datos vía push del servidor y reemplaza el contenido de los elementos con data-zea-bind
+- Los datos vienen de la Venture API de ZEA Platform vía intent_routing con type: "domain_api"
+
+API CATALOG (endpoints disponibles para dar datos a las pantallas):
+${JSON.stringify(API_CATALOG, null, 2)}
+
+FORMATO DE INTENT ROUTING:
+Un intent de tipo domain_api tiene esta estructura:
+{
+  "type": "domain_api",
+  "domain": "venture",
+  "endpoint": "GET /gp/dashboard",
+  "target_state": "nombre_del_state",
+  "data_mapping": {
+    "key_en_html": "campo_en_api_response"
+  }
+}
+
+PATRONES COMUNES DE STITCH:
+- Métricas/KPIs: suelen estar en <span> con iconos de Material Symbols (class="material-symbols-outlined")
+- Tablas: <table> con <thead> y <tbody>, datos estáticos de ejemplo
+- Botones de acción: <button> con texto descriptivo
+- Formularios: <input> o <textarea> con placeholders
+- Gráficos: divs vacíos o placeholders SVG
+- Navegación: sidebar con íconos y labels
+
+Tu tarea: analizá la pantalla Stitch y devolvé SOLO este JSON (sin markdown, sin explicaciones fuera del JSON):
+{
+  "type": "dashboard" | "list" | "form" | "detail" | "wizard" | "unknown",
+  "confidence": 0.0 a 1.0,
+  "reasoning": "explicación breve en español de por qué clasificaste así",
+  "components": [
+    {
+      "type": "kpi" | "table" | "button" | "chart" | "form" | "heading" | "navigation" | "card",
+      "label": "texto visible o descripción del componente",
+      "html_selector": "fragmento único del HTML para identificar este elemento",
+      "data_bind": "nombre sugerido para el data-zea-bind (ej: aum, active_funds, funds)",
+      "api_endpoint": "endpoint que provee este dato (ej: GET /gp/dashboard)",
+      "api_field": "campo específico en la response de la API",
+      "column_bindings": ["col1", "col2"] // solo para tablas: nombres de columnas sugeridos
+    }
+  ],
+  "suggested_intents": [
+    {
+      "name": "load_dashboard" | "load_list" | "submit_form" | "navigate_to",
+      "type": "domain_api" | "state_transition",
+      "domain": "venture",
+      "endpoint": "GET /gp/dashboard" | null,
+      "target_state": "nombre_del_state",
+      "data_mapping": { "html_key": "api_response_field" }
+    }
+  ],
+  "injection_points": [
+    {
+      "html_selector": "fragmento exacto del HTML a modificar",
+      "data_bind": "nombre del binding a inyectar",
+      "action": "replace_text" | "wrap_span" | "add_to_tr",
+      "description": "qué hacer con este elemento"
+    }
+  ]
+}
+
+REGLAS:
+- Para tablas: data-zea-bind va en cada <tr> del <tbody> como iterador del array, y column_bindings en cada <td>
+- Para KPIs: data-zea-bind va en el <span> que contiene el valor numérico
+- Para formularios: los intents son type "domain_api" con endpoint POST
+- Si un componente no matchea ninguna API, marcarlo como type "static" sin api_endpoint
+- data_mapping usa los mismos keys que data-zea-bind
+- Preferí data-zea-bind cortos y descriptivos en español o inglés estándar`;
+
+async function callLLM(systemPrompt, userPrompt) {
+  if (!DEEPSEEK_KEY) throw new Error('DEEPSEEK_API_KEY not set');
+
+  const resp = await fetch(DEEPSEEK_API, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${DEEPSEEK_KEY}`
+    },
+    body: JSON.stringify({
+      model: DEEPSEEK_MODEL,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+      ],
+      temperature: 0.1,
+      max_tokens: 4000,
+      response_format: { type: 'json_object' }
+    })
+  });
+
+  if (!resp.ok) throw new Error(`DeepSeek API error: ${resp.status} ${await resp.text()}`);
+  const data = await resp.json();
+  const content = data.choices?.[0]?.message?.content;
+  if (!content) throw new Error('Empty LLM response');
+  return JSON.parse(content);
+}
+
+function analyzeRegex(html) {
+  const hasKPIs = (html.match(/metric|kpi|KPI|AUM|total|activo|active/gi) || []).length >= 2;
+  const hasTable = html.includes('<table') || html.includes('<thead') || html.includes('<tbody');
+  const hasForm = html.includes('<form') || html.includes('<input');
+  const hasChart = html.includes('chart') || html.includes('canvas') || html.includes('recharts');
+  const headings = html.match(/<h[1-6][^>]*>([^<]+)<\/h[1-6]>/gi) || [];
+
+  let screenType = 'detail';
+  if (hasKPIs && hasTable) screenType = 'dashboard';
+  else if (hasTable && !hasKPIs) screenType = 'list';
+  else if (hasForm) screenType = 'form';
+
+  return { screenType, hasKPIs, hasTable, hasForm, hasChart, headings };
+}
 
 export function register(program) {
   const screenCmd = program.command('screen').description('Screen functionalization — analyze and add data bindings to Stitch screens');
 
   // ─── analyze ───────────────────────────────────────────
   screenCmd.command('analyze')
-    .description('Analyze a StitchedScreen HTML and identify components + data needs')
+    .description('Analyze a StitchedScreen HTML (--llm for AI-powered, or regex by default)')
     .requiredOption('--app <id>', 'App ID')
     .requiredOption('--screen <name>', 'Screen state name')
+    .option('--llm', 'Use DeepSeek LLM for semantic analysis')
     .action(async (opts) => {
       try {
         const client = await getClient();
@@ -21,61 +175,48 @@ export function register(program) {
         if (state.type !== 'StitchedScreen') throw new Error(`State is type '${state.type}', not StitchedScreen`);
 
         const html = state.html || '';
-        console.log(`\n${chalk.bold('Analyzing:')} ${opts.screen} (${html.length} bytes)\n`);
 
-        // Detect type
-        const hasKPIs = (html.match(/metric|kpi|KPI|AUM|total|activo|active/gi) || []).length >= 2;
-        const hasTable = html.includes('<table') || html.includes('<thead') || html.includes('<tbody');
-        const hasForm = html.includes('<form') || html.includes('<input');
-        const hasChart = html.includes('chart') || html.includes('canvas') || html.includes('recharts');
-        const headings = html.match(/<h[1-6][^>]*>([^<]+)<\/h[1-6]>/gi) || [];
+        if (opts.llm) {
+          console.log(`\n${chalk.bold('LLM Analysis:')} ${opts.screen} (${html.length} bytes)\n`);
+          const userPrompt = `Analizá esta pantalla Stitch:\n\nTITLE: ${opts.screen}\nHTML (${html.length} bytes):\n${html.slice(0, 10000)}`;
+          const analysis = await callLLM(SYSTEM_PROMPT, userPrompt);
 
-        let screenType = 'detail';
-        if (hasKPIs && hasTable) screenType = 'dashboard';
-        else if (hasTable && !hasKPIs) screenType = 'list';
-        else if (hasForm) screenType = 'form';
+          console.log(`${chalk.cyan('Type:')} ${analysis.type} (confidence: ${(analysis.confidence * 100).toFixed(0)}%)`);
+          console.log(`${chalk.dim('Reasoning:')} ${analysis.reasoning}\n`);
 
-        console.log(`${chalk.cyan('Type:')} ${screenType}`);
+          console.log(`${chalk.cyan('Components:')}`);
+          for (const c of analysis.components || []) {
+            const icon = c.type === 'kpi' ? '📊' : c.type === 'table' ? '📋' : c.type === 'button' ? '🔘' : c.type === 'chart' ? '📈' : c.type === 'form' ? '📝' : '📌';
+            console.log(`  ${icon} ${c.label}`);
+            console.log(`     data-zea-bind="${c.data_bind}"  ← ${c.api_endpoint}.${c.api_field}`);
+            if (c.column_bindings?.length) console.log(`     columns: ${c.column_bindings.join(', ')}`);
+          }
 
-        // Components
-        console.log(`\n${chalk.cyan('Components:')}`);
-        console.log(`  KPI cards: ${hasKPIs ? '✅' : '❌'} (detected ${hasKPIs ? 'metric values' : 'no metrics'})`);
-        console.log(`  Data table: ${hasTable ? '✅' : '❌'}`);
-        console.log(`  Form inputs: ${hasForm ? '✅' : '❌'}`);
-        console.log(`  Chart: ${hasChart ? '✅' : '❌'}`);
-        console.log(`  Headings: ${headings.length} (${headings.map(h => h.replace(/<[^>]+>/g,'')).join(', ')})`);
+          console.log(`\n${chalk.cyan('Suggested Intents (${analysis.suggested_intents?.length || 0}):')}`);
+          for (const i of analysis.suggested_intents || []) {
+            console.log(`  → ${i.name}: ${i.type} ${i.endpoint || ''} → ${i.target_state}`);
+            if (i.data_mapping) console.log(`     mapping: ${JSON.stringify(i.data_mapping)}`);
+          }
 
-        // Extract static values
-        const spans = html.match(/<span[^>]*>([^<]+)<\/span>/gi) || [];
-        const values = spans.map(s => s.replace(/<[^>]+>/g, '')).filter(v => v.trim().length > 0 && v.trim().length < 60);
-        console.log(`\n${chalk.cyan('Static values (candidates for data-zea-bind):')}`);
-        const unique = [...new Set(values)].slice(0, 15);
-        unique.forEach(v => console.log(`  "${v.trim()}"`));
+          console.log(`\n${chalk.cyan('Injection Points (${analysis.injection_points?.length || 0}):')}`);
+          for (const ip of analysis.injection_points || []) {
+            console.log(`  • "${ip.html_selector?.slice(0, 60)}" → data-zea-bind="${ip.data_bind}" (${ip.action})`);
+          }
 
-        // Data needs
-        console.log(`\n${chalk.cyan('Data needs:')}`);
-        const needs = [];
-        if (screenType === 'dashboard') {
-          needs.push('GET /gp/dashboard → {active_funds, active_lps, aum, pending_capital_calls}');
-          needs.push('GET /gp/funds → [{name, status, type, total_size, currency}]');
-        } else if (screenType === 'list') {
-          needs.push('GET /gp/{entity} → [{...}]');
-        } else if (screenType === 'form') {
-          needs.push('POST /gp/{entity} ← {field1, field2, ...}');
+          console.log(`\nRun: ${chalk.green(`zea screen functionalize --app ${opts.app} --screen ${opts.screen} --llm`)}`);
+
+        } else {
+          // Regex fallback
+          console.log(`\n${chalk.bold('Regex Analysis:')} ${opts.screen} (${html.length} bytes)\n`);
+          const a = analyzeRegex(html);
+          console.log(`${chalk.cyan('Type:')} ${a.screenType}`);
+          console.log(`  KPI: ${a.hasKPIs ? '✅' : '❌'} | Table: ${a.hasTable ? '✅' : '❌'} | Form: ${a.hasForm ? '✅' : '❌'} | Chart: ${a.hasChart ? '✅' : '❌'}`);
+          const spans = (html.match(/<span[^>]*>([^<]+)<\/span>/gi) || []).map(s => s.replace(/<[^>]+>/g, '')).filter(v => v.trim() && v.length < 60);
+          console.log(`\n${chalk.cyan('Static values:')}`);
+          [...new Set(spans)].slice(0, 15).forEach(v => console.log(`  "${v.trim()}"`));
+          console.log(`\nRun: ${chalk.green(`zea screen functionalize --app ${opts.app} --screen ${opts.screen}`)}`);
+          console.log(`${chalk.dim('Tip: use --llm for AI-powered semantic analysis')}`);
         }
-        needs.forEach(n => console.log(`  → ${n}`));
-
-        // Suggested bindings
-        console.log(`\n${chalk.cyan('Suggested data-zea-bind:')}`);
-        if (screenType === 'dashboard') {
-          console.log('  data-zea-bind="aum" → AUM Total value');
-          console.log('  data-zea-bind="active_funds" → Fondos Activos count');
-          console.log('  data-zea-bind="active_lps" → LP count');
-          console.log('  data-zea-bind="pending_calls" → Pending capital calls');
-          console.log('  data-zea-bind="funds" → table row (array)');
-          console.log('  data-zea-bind="name", "status", "total_size" → table columns');
-        }
-        console.log(`\nRun: ${chalk.green(`zea screen functionalize --app ${opts.app} --screen ${opts.screen}`)}`);
 
       } catch (e) {
         console.error('Error:', e.message);
@@ -88,11 +229,10 @@ export function register(program) {
     .requiredOption('--app <id>', 'App ID')
     .requiredOption('--screen <name>', 'Screen state name')
     .option('--dry-run', 'Preview changes without updating manifest')
+    .option('--llm', 'Use LLM for intelligent binding injection')
     .action(async (opts) => {
       try {
         const client = await getClient();
-
-        // 1. Fetch manifest
         console.log(`\n[1/5] Fetching manifest...`);
         const resp = await fetch(`${client.appsUrl}/api/apps/${opts.app}/manifest`, { headers: client.headers });
         if (!resp.ok) throw new Error(`API error: ${resp.status}`);
@@ -102,67 +242,51 @@ export function register(program) {
         if (state.type !== 'StitchedScreen') throw new Error(`State is type '${state.type}', not StitchedScreen`);
 
         let html = state.html || '';
+        let analysis;
 
-        // 2. Analyze
         console.log(`[2/5] Analyzing HTML (${html.length} bytes)...`);
-        const hasKPIs = (html.match(/metric|kpi|KPI|AUM|total|activo|active/gi) || []).length >= 2;
-        const hasTable = html.includes('<table');
 
-        let screenType = hasKPIs && hasTable ? 'dashboard' : hasTable ? 'list' : 'detail';
-        console.log(`   Type: ${screenType}`);
+        if (opts.llm) {
+          const userPrompt = `Analizá esta pantalla y devolvé el JSON con injection_points para functionalizarla:\n\nTITLE: ${opts.screen}\nHTML (${html.length} bytes):\n${html.slice(0, 10000)}`;
+          analysis = await callLLM(SYSTEM_PROMPT, userPrompt);
+        } else {
+          analysis = { type: analyzeRegex(html).screenType, injection_points: [], suggested_intents: [] };
+        }
 
-        // 3. Inject data-zea-bind
+        // 3. Inject bindings
         console.log(`[3/5] Injecting data-zea-bind...`);
         let bindings = 0;
 
-        if (screenType === 'dashboard') {
-          // KPI bindings — find spans with metric-like content and inject
-          const kpiPatterns = [
-            { match: />(\$?[\d,\.]+[KMB]?%?\s?(YoY)?)<\/span>/, bind: 'aum', label: 'AUM/monetary value' },
-            { match: />(\d+)\s*(Activo|active|fondos|funds)/i, bind: 'active_funds', label: 'Active funds count' },
-            { match: />(\d+)\s*(LP|lp|investor|inversor)/i, bind: 'active_lps', label: 'LP count' },
-            { match: />(\d+)\s*(pend|pendiente|call)/i, bind: 'pending_calls', label: 'Pending calls' },
-          ];
-
-          for (const p of kpiPatterns) {
-            const re = new RegExp(p.match.source, 'gi');
-            const newHtml = html.replace(re, (match) => {
-              return match.includes('data-zea-bind') ? match : match.replace(/^>/, ` data-zea-bind="${p.bind}">`);
-            });
-            if (newHtml !== html) {
-              html = newHtml;
-              bindings++;
-              console.log(`   ✅ ${p.bind} (${p.label})`);
+        if (analysis.injection_points?.length > 0) {
+          for (const ip of analysis.injection_points) {
+            if (html.includes(ip.html_selector) && !html.includes(`data-zea-bind="${ip.data_bind}"`)) {
+              if (ip.action === 'wrap_span') {
+                html = html.replace(`>${ip.html_selector}<`, ` data-zea-bind="${ip.data_bind}">${ip.html_selector}<`);
+              } else if (ip.action === 'replace_text') {
+                html = html.replace(`>${ip.html_selector}<`, ` data-zea-bind="${ip.data_bind}">${ip.html_selector}<`);
+              } else if (ip.action === 'add_to_tr') {
+                html = html.replace(/<tr([^>]*)class="([^"]*)"/, (m, a, c) => `<tr${a}class="${c}" data-zea-bind="${ip.data_bind}"`);
+              }
+              if (html.includes(`data-zea-bind="${ip.data_bind}"`)) {
+                bindings++;
+                console.log(`   ✅ ${ip.data_bind} (${ip.description || ip.html_selector?.slice(0, 40)})`);
+              }
             }
           }
-
-          // Also try explicit text matches
-          const textBinds = [
-            { text: 'AUM Total', bind: 'aum' },
-            { text: 'Fondos Activos', bind: 'active_funds' },
-          ];
-          for (const tb of textBinds) {
-            if (html.includes(tb.text) && !html.includes(`data-zea-bind="${tb.bind}"`)) {
-              html = html.replace(`>${tb.text}<`, ` data-zea-bind="${tb.bind}">${tb.text}<`);
-              bindings++;
-              console.log(`   ✅ ${tb.bind} (explicit "${tb.text}")`);
+        } else {
+          // Regex fallback for dashboard
+          const a = analyzeRegex(html);
+          if (a.screenType === 'dashboard') {
+            for (const [text, bind] of [['AUM Total', 'aum'], ['Fondos Activos', 'active_funds']]) {
+              if (html.includes(text) && !html.includes(`data-zea-bind="${bind}"`)) {
+                html = html.replace(`>${text}<`, ` data-zea-bind="${bind}">${text}<`);
+                bindings++;
+              }
             }
-          }
-        }
-
-        // Table bindings
-        if (hasTable && !html.includes('data-zea-bind="funds"')) {
-          // Add binding to tbody row
-          html = html.replace(/<tr([^>]*)class="([^"]*)"/, (match, attrs, cls) => {
-            return `<tr${attrs}class="${cls}" data-zea-bind="funds"`;
-          });
-          if (html.includes('data-zea-bind="funds"')) {
-            bindings++;
-            console.log(`   ✅ funds (table row array)`);
-          } else {
-            // Try alternative: add to each tr in tbody
-            html = html.replace(/<tbody[^>]*>/g, (match) => `${match}\n<tr data-zea-bind="funds">`);
-            if (html.includes('data-zea-bind="funds"')) bindings++;
+            if (a.hasTable && !html.includes('data-zea-bind="funds"')) {
+              html = html.replace(/<tr([^>]*)class="([^"]*)"/, (m, a, c) => `<tr${a}class="${c}" data-zea-bind="funds"`);
+              if (html.includes('data-zea-bind="funds"')) bindings++;
+            }
           }
         }
 
@@ -172,21 +296,26 @@ export function register(program) {
         console.log(`[4/5] Creating intent_routing...`);
         manifest.intent_routing = manifest.intent_routing || {};
 
-        if (screenType === 'dashboard') {
-          manifest.intent_routing[`load_${opts.screen}`] = {
-            type: 'domain_api',
-            domain: 'venture',
-            endpoint: 'GET /gp/dashboard',
-            target_state: opts.screen,
-            data_mapping: {
-              aum: 'aum',
-              active_funds: 'active_funds_count',
-              active_lps: 'active_lps',
-              pending_calls: 'pending_capital_calls',
-              total_called: 'total_called',
-              total_paid: 'total_paid'
+        if (analysis.suggested_intents?.length > 0) {
+          for (const intent of analysis.suggested_intents) {
+            if (!manifest.intent_routing[intent.name]) {
+              manifest.intent_routing[intent.name] = {
+                type: intent.type,
+                domain: intent.domain || 'venture',
+                endpoint: intent.endpoint,
+                target_state: intent.target_state,
+                data_mapping: intent.data_mapping || {}
+              };
             }
-          };
+          }
+        } else if (analysis.type === 'dashboard' || analyzeRegex(html).screenType === 'dashboard') {
+          if (!manifest.intent_routing[`load_${opts.screen}`]) {
+            manifest.intent_routing[`load_${opts.screen}`] = {
+              type: 'domain_api', domain: 'venture', endpoint: 'GET /gp/dashboard',
+              target_state: opts.screen,
+              data_mapping: { aum: 'aum', active_funds: 'active_funds_count', active_lps: 'active_lps', pending_calls: 'pending_capital_calls', total_called: 'total_called', total_paid: 'total_paid' }
+            };
+          }
         }
 
         const intents = Object.keys(manifest.intent_routing).length;
@@ -204,32 +333,21 @@ export function register(program) {
 
         console.log(`[5/5] Updating manifest...`);
         const payload = {
-          app_id: opts.app,
-          name: manifest.name || 'App',
-          domain_auth: manifest.domain_auth || 'venture',
-          status: 'active',
-          version: '1.0.0',
-          manifest,
-          states: manifest.states,
-          intent_routing: manifest.intent_routing,
-          shell: manifest.shell || {},
-          design_system: manifest.design_system || {}
+          app_id: opts.app, name: manifest.name || 'App', domain_auth: manifest.domain_auth || 'venture',
+          status: 'active', version: '1.0.0', manifest,
+          states: manifest.states, intent_routing: manifest.intent_routing,
+          shell: manifest.shell || {}, design_system: manifest.design_system || {}
         };
 
         const uResp = await fetch(`${client.appsUrl}/api/apps`, {
-          method: 'POST',
-          headers: client.headers,
-          body: JSON.stringify(payload)
+          method: 'POST', headers: client.headers, body: JSON.stringify(payload)
         });
         if (!uResp.ok) throw new Error(`Update failed: ${uResp.status}`);
         console.log(`   ✅ Manifest updated`);
 
         console.log(`\n${chalk.green('✅ Screen functionalized!')}`);
-        console.log(`   App:     ${opts.app}`);
-        console.log(`   Screen:  ${opts.screen}`);
-        console.log(`   Type:    ${screenType}`);
-        console.log(`   Bindings: ${bindings}`);
-        console.log(`   Intents: ${intents}`);
+        console.log(`   App:     ${opts.app} | Screen: ${opts.screen}`);
+        console.log(`   Type:    ${analysis.type || '?'} | Bindings: ${bindings} | Intents: ${intents}`);
 
       } catch (e) {
         console.error('Error:', e.message);
