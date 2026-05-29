@@ -32,19 +32,21 @@ export function register(program) {
     .action(async (opts) => {
       const results = { app: opts.app, checks: {} };
 
-      // 1. Venture API endpoints
+      // 1. Venture API endpoints (with token from env)
+      const token = process.env.ZEA_TOKEN || '';
+      const orgId = process.env.ZEA_ORG_ID || '';
       try {
-        const dashboard = execSync("curl -s --max-time 5 http://venture-api:4081/gp/dashboard 2>/dev/null || echo '{}'", { encoding: 'utf8', timeout: 7000 });
+        const dashboard = execSync(`curl -s --max-time 5 http://venture-api:4081/gp/dashboard -H 'Authorization: Bearer ${token}' -H 'X-Zea-Org-Id: ${orgId}' 2>/dev/null || echo '{}'`, { encoding: 'utf8', timeout: 7000 });
         results.checks.dashboard = dashboard.includes('active_funds') ? 'ok' : 'fail';
       } catch (e) { results.checks.dashboard = 'unreachable'; }
 
       try {
-        const funds = execSync("curl -s --max-time 5 http://venture-api:4081/gp/funds 2>/dev/null || echo '{}'", { encoding: 'utf8', timeout: 7000 });
+        const funds = execSync(`curl -s --max-time 5 http://venture-api:4081/gp/funds -H 'Authorization: Bearer ${token}' -H 'X-Zea-Org-Id: ${orgId}' 2>/dev/null || echo '{}'`, { encoding: 'utf8', timeout: 7000 });
         results.checks.funds = funds.includes('name') ? 'ok' : 'fail';
       } catch (e) { results.checks.funds = 'unreachable'; }
 
       try {
-        const investors = execSync("curl -s --max-time 5 http://venture-api:4081/gp/investors 2>/dev/null || echo '{}'", { encoding: 'utf8', timeout: 7000 });
+        const investors = execSync(`curl -s --max-time 5 http://venture-api:4081/gp/investors -H 'Authorization: Bearer ${token}' -H 'X-Zea-Org-Id: ${orgId}' 2>/dev/null || echo '{}'`, { encoding: 'utf8', timeout: 7000 });
         results.checks.investors = investors.includes('name') ? 'ok' : 'fail';
       } catch (e) { results.checks.investors = 'unreachable'; }
 
