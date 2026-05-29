@@ -18,14 +18,14 @@ async function savePlan(plan) {
   await fs.writeFile(PLAN_FILE, JSON.stringify(plan, null, 2));
 }
 
-function phaseStats(phase) {
+function phaseStats(phase, results) {
   const tests = phase.tests || {};
   const ids = Object.keys(tests);
   const total = ids.length;
-  const executed = ids.filter(id => tests[id].status === 'auto' || tests[id].result).length;
-  const passed = ids.filter(id => (tests[id].result || '') === 'pass' || (tests[id].status === 'auto' && tests[id].pass)).length;
-  const failed = ids.filter(id => (tests[id].result || '') === 'fail').length;
-  const partial = ids.filter(id => (tests[id].result || '').includes('partial')).length;
+  const executed = ids.filter(id => results[id] != null).length;
+  const passed = ids.filter(id => results[id]?.status === 'pass').length;
+  const failed = ids.filter(id => results[id]?.status === 'fail').length;
+  const partial = ids.filter(id => results[id]?.status?.includes('partial')).length;
   const pending = total - executed;
   return { total, executed, passed, failed, partial, pending };
 }
@@ -41,11 +41,12 @@ export function register(program) {
     .action(async (opts) => {
       const plan = await loadPlan();
       const phases = plan.phases || {};
+      const results = plan.results || {};
 
       if (opts.json) {
         const summary = {};
         for (const [id, p] of Object.entries(phases)) {
-          summary[id] = phaseStats(p);
+          summary[id] = phaseStats(p, results);
         }
         console.log(JSON.stringify(summary, null, 2));
         return;
@@ -57,7 +58,7 @@ export function register(program) {
 
       for (const [id, p] of Object.entries(phases)) {
         if (opts.phase && id !== opts.phase && !id.includes(opts.phase)) continue;
-        const s = phaseStats(p);
+        const s = phaseStats(p, results);
         totalAll += s.total;
         executedAll += s.executed;
         passedAll += s.passed;
@@ -76,9 +77,9 @@ export function register(program) {
         if (executedAll < totalAll) {
           // Find next pending
           for (const [id, p] of Object.entries(phases)) {
-            const s = phaseStats(p);
+            const s = phaseStats(p, results);
             if (s.pending > 0) {
-              const nextTests = Object.entries(p.tests || {}).filter(([, t]) => !t.result && t.status !== 'auto');
+              const nextTests = Object.entries(p.tests || {}).filter(([tid]) => !results[tid]);
               if (nextTests.length > 0) {
                 console.log(chalk.yellow(`Próximo: ${p.label} → ${nextTests[0][0].toUpperCase()}: ${nextTests[0][1].desc}`));
                 break;
@@ -161,12 +162,13 @@ export function register(program) {
     .option('--json', 'Output as JSON')
     .action(async (opts) => {
       const plan = await loadPlan();
+      const results = plan.results || {};
       const phases = plan.phases || {};
 
       if (opts.json) {
         const report = { phases: {}, summary: {} };
         for (const [id, p] of Object.entries(phases)) {
-          report.phases[id] = phaseStats(p);
+          report.phases[id] = phaseStats(p, results);
         }
         const all = Object.values(report.phases);
         report.summary = {
