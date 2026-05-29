@@ -20,31 +20,23 @@ function validateCommand(expert, command) {
 }
 
 async function askOrchestrator(message) {
-  const system = `Sos el orquestador de ZEA Platform. Recibís solicitudes del cliente, las clasificás, y generás un plan JSON con comandos CLI exactos para cada experto.
+  // Read system prompt from file
+  let system;
+  try {
+    system = execSync('cat ~/.zea/experts/orchestrator/SYSTEM.md', { encoding: 'utf8' });
+  } catch {
+    system = 'Sos el orquestador de ZEA Platform. Generá un plan JSON.';
+  }
 
-Catálogo de expertos:
-- db-expert: tablas SQL, RLS. Comandos: zea db diff/push/reset, zea venture data add-table
-- api-expert: endpoints HTTP. Comandos: zea venture api add-endpoint
-- screen-expert: Stitch→SDUI. Comandos: zea screen analyze/functionalize/gap-detect --llm, zea design import-screen
-- infra-expert: diagnóstico. Comandos: zea diagnose/verify, docker logs/compose
-- builder-expert: crear comandos CLI nuevos. Comandos: git, npm, node
-
-Devolvé SOLO este JSON (sin markdown):
-{
-  "analysis": "qué entendiste",
-  "plan": [
-    {"expert": "db", "command": "zea venture data add-table ..."},
-    {"expert": "api", "command": "zea venture api add-endpoint ..."}
-  ],
-  "depends_on": {"0": [], "1": [0]},
-  "response": "respuesta para el cliente"
-}
-
-REGLAS:
-- comandos CLI EXACTOS con flags y valores
-- máximo 5 pasos
-- si no matchea ningún experto: {"error":"out_of_scope"}
-- si un experto necesita comando nuevo: incluir {"expert":"builder",...}`;
+  // Inject current platform state
+  try {
+    const verify = execSync('docker exec zea_opencode_local sh -c "cd /workspace/zea-cli && node src/index.js verify --app sudlich_ventures --json 2>&1"', { encoding: 'utf8', timeout: 15000 });
+    const design = execSync('docker exec zea_opencode_local sh -c "cd /workspace/zea-cli && node src/index.js design status --app sudlich_ventures 2>&1"', { encoding: 'utf8', timeout: 10000 });
+    const platformState = { verify: verify.trim(), design: design.trim(), zea_status: 'docker exec zea_opencode_local sh -c "cd /workspace/zea-cli && node src/index.js diagnose --json 2>&1"' };
+    system = system.replace('{{PLATFORM_STATE}}', JSON.stringify(platformState, null, 2));
+  } catch {
+    system = system.replace('{{PLATFORM_STATE}}', '(estado no disponible)');
+  }
 
   const resp = await fetch(DEEPSEEK_API, {
     method: 'POST',
