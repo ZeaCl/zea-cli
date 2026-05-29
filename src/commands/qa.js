@@ -188,8 +188,7 @@ export function register(program) {
       const totalAll = { total: 0, executed: 0, passed: 0, failed: 0, partial: 0, pending: 0 };
 
       for (const [id, p] of Object.entries(phases)) {
-        const s = phaseStats(p);
-        Object.keys(totalAll).forEach(k => totalAll[k] += s[k]);
+        const s = phaseStats(p, results);        Object.keys(totalAll).forEach(k => totalAll[k] += s[k]);
         const icon = s.pending === 0 ? '✅' : s.executed > 0 ? '⏳' : '⬜';
         console.log(`${icon} ${p.label}`);
         console.log(`   ${s.executed}/${s.total} | ${s.passed}✅ ${s.failed}❌ ${s.partial}⚠️ ${s.pending}⏳`);
@@ -208,7 +207,7 @@ export function register(program) {
       let recos = [];
       if (totalAll.failed > 3) recos.push(`${totalAll.failed} tests fallando — priorizar fixes`);
       if (totalAll.pending > 10) recos.push(`${totalAll.pending} pendientes — ejecutar fases pendientes`);
-      const gapphases = Object.entries(phases).filter(([, p]) => phaseStats(p).pending > 0);
+      const gapphases = Object.entries(phases).filter(([, p]) => phaseStats(p, results).pending > 0);
       if (gapphases.length > 0) {
         recos.push(`Priorizar: ${gapphases.map(([, p]) => p.label.split(' ')[0]).join(', ')}`);
       }
