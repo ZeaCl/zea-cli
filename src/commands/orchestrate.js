@@ -3,7 +3,7 @@ import { execSync } from 'child_process';
 
 const DEEPSEEK_API = 'https://api.deepseek.com/v1/chat/completions';
 const DEEPSEEK_KEY = process.env.DEEPSEEK_API_KEY || process.env.DEEPSEEK_API_KEYS || '';
-const OPENCODE = 'http://opencode:4096';
+const OPENCODE = process.env.OPENCODE_URL || 'http://localhost:4096';
 
 const ALLOWLISTS = {
   db: [/^zea db\b/, /^zea venture data\b/],
@@ -94,17 +94,29 @@ async function executePlan(plan) {
     console.log(chalk.dim(`  ${cmdWithContext}`));
 
     try {
-      // Execute via opencode container
-      const result = execSync(
-        `docker exec -i zea_opencode_local opencode run /workspace --model deepseek/deepseek-v4-pro --pure --prompt "${cmdWithContext.replace(/"/g, '\\"')}" 2>&1`,
-        { encoding: 'utf8', timeout: 120000, maxBuffer: 10 * 1024 * 1024 }
-      );
+      // Execute via opencode HTTP API (avoids shell escaping issues)
+      const sidResp = await fetch(`${OPENCODE}/session`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: `step-${i+1}-${expert}`, directory: '/workspace' })
+      });
+      const sidData = await sidResp.json();
+      const sid = sidData.id;
 
-      const lastLines = result.split('\n').slice(-3).join(' | ');
-      console.log(chalk.green(`  ✅ ${lastLines.slice(0, 100)}`));
+      const msgResp = await fetch(`${OPENCODE}/session/${sid}/message`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: { providerID: 'deepseek', modelID: 'deepseek-v4-pro' },
+          parts: [{ type: 'text', text: cmdWithContext }]
+        })
+      });
+      const msgData = await msgResp.json();
+      const response = (msgData.parts || []).filter(p => p.type === 'text').map(p => p.text).join('\n');
 
+      console.log(chalk.green(`  ✅ ${response.slice(0, 100)}`));
       context[`step${i+1}_result`] = 'ok';
-      results.push({ step: i+1, expert, command: cmdWithContext, status: 'ok' });
+      results.push({ step: i+1, expert, command: cmdWithContext, status: 'ok', response });
 
     } catch (e) {
       console.log(chalk.red(`  ❌ ${e.message?.slice(0, 100)}`));
@@ -114,16 +126,38 @@ async function executePlan(plan) {
       if (i < 2) { // retry up to 2 times
         try {
           console.log(chalk.yellow(`  → Delegando a infra-expert...`));
-          execSync(
-            `docker exec -i zea_opencode_local opencode run /workspace --model deepseek/deepseek-v4-pro --pure --prompt "ERROR: ${cmdWithContext} failed. ${e.message?.slice(0, 200)}. Diagnose and fix." 2>&1`,
-            { encoding: 'utf8', timeout: 120000 }
-          );
+          const infraSidResp = await fetch(`${OPENCODE}/session`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: `infra-fix-${i+1}`, directory: '/workspace' })
+          });
+          const infraSidData = await infraSidResp.json();
+          const infraSid = infraSidData.id;
+
+          await fetch(`${OPENCODE}/session/${infraSid}/message`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              model: { providerID: 'deepseek', modelID: 'deepseek-v4-pro' },
+              parts: [{ type: 'text', text: `ERROR: ${cmdWithContext} failed. ${e.message?.slice(0, 200)}. Diagnose and fix.` }]
+            })
+          });
+
           // Retry original step
-          const retry = execSync(
-            `docker exec -i zea_opencode_local opencode run /workspace --model deepseek/deepseek-v4-pro --pure --prompt "${cmdWithContext.replace(/"/g, '\\"')}" 2>&1`,
-            { encoding: 'utf8', timeout: 120000, maxBuffer: 10 * 1024 * 1024 }
-          );
-          console.log(chalk.green(`  ✅ Retry OK`));
+          const retrySidResp = await fetch(`${OPENCODE}/session`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: `retry-${i+1}-${expert}`, directory: '/workspace' })
+          });
+          const retrySidData = await retrySidResp.json();
+          const retrySid = retrySidData.id;
+
+          const retryMsgResp = await fetch(`${OPENCODE}/session/${retrySid}/message`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              model: { providerID: 'deepseek', modelID: 'deepseek-v4-pro' },
+              parts: [{ type: 'text', text: cmdWithContext }]
+            })
+          });
+          const retryData = await retryMsgResp.json();
+          console.log(chalk.green(`  ✅ Retry OK: ${(retryData.parts || []).filter(p => p.type === 'text').map(p => p.text).join(' ').slice(0, 100)}`));
         } catch (e2) {
           // Give up after retry
         }
