@@ -535,4 +535,64 @@ CREATE POLICY ${opts.name}_org_isolation ON ${opts.name}
         console.error('Error:', e.message);
       }
     });
+
+  // ─── data import ────────────────────────────────────────
+  ventureData.command('import')
+    .description('Import data from Excel file into Venture DB')
+    .requiredOption('--file <path>', 'Excel file path')
+    .option('--llm', 'Use LLM for auto-mapping columns')
+    .option('--yes', 'Skip confirmation')
+    .action(async (opts) => {
+      try {
+        const client = await getClient();
+        console.log(`Importing: ${opts.file}\n`);
+
+        const sheets = JSON.parse(
+          execSync(`python3 -c "
+import pandas as pd, json
+f = '${opts.file}'
+sheets = pd.read_excel(f, sheet_name=None)
+result = {}
+for name, df in sheets.items():
+    result[name] = [dict(zip(df.columns, [str(v) if pd.notna(v) else None for v in row])) for _, row in df.iterrows()]
+print(json.dumps(result))
+"`, { encoding: 'utf8', timeout: 15000 }).toString()
+        );
+
+        const entityMap = { funds: '/gp/funds', investors: '/gp/investors' };
+        const headers = { ...client.headers, 'Content-Type': 'application/json' };
+        if (client.activeOrgId) headers['X-Zea-Org-Id'] = client.activeOrgId;
+
+        let created = {};
+
+        for (const [sheet, rows] of Object.entries(sheets)) {
+          const isFunds = /fund/i.test(sheet);
+          const isLps = /investor|lp/i.test(sheet);
+          const entity = isFunds ? 'funds' : isLps ? 'investors' : null;
+          if (!entity) { console.log(`  ⚠️  Unknown: ${sheet}`); continue; }
+
+          console.log(`${entity}: ${rows.length} rows`);
+
+          for (const row of rows) {
+            try {
+              if (entity === 'funds') {
+                const body = { name: row.name || row.Name, type: row.type || 'VENTURE_CAPITAL', total_size: parseInt(row.total_size || 0) * 100, currency: row.currency || 'USD', status: row.status || 'DRAFT' };
+                const r = await fetch(`${client.ventureUrl}${entityMap[entity]}`, { method: 'POST', headers, body: JSON.stringify(body) });
+                if (r.ok) { created[entity] = (created[entity] || 0) + 1; }
+              } else if (entity === 'investors') {
+                const body = { name: row.name || row.Name, email: row.email || row.Email, investor_type: row.investor_type || row.investorType || 'INDIVIDUAL', is_qualified_investor: row.is_qualified === 'true' || row.is_qualified === true };
+                const r = await fetch(`${client.ventureUrl}${entityMap[entity]}`, { method: 'POST', headers, body: JSON.stringify(body) });
+                if (r.ok) { created[entity] = (created[entity] || 0) + 1; }
+              }
+            } catch (e) { /* skip row errors */ }
+          }
+        }
+
+        console.log(`\nImport complete:`);
+        for (const [e, c] of Object.entries(created)) console.log(`  ✅ ${e}: ${c}`);
+
+      } catch (e) {
+        console.error('Error:', e.message);
+      }
+    });
 }

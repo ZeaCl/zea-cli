@@ -353,4 +353,210 @@ export function register(program) {
         console.error('Error:', e.message);
       }
     });
+
+  // ─── gap-detect ─────────────────────────────────────────
+  screenCmd.command('gap-detect')
+    .description('Scan all screens for components without API bindings (uses LLM)')
+    .requiredOption('--app <id>', 'App ID')
+    .option('--llm', 'Use LLM for semantic gap detection')
+    .option('--json', 'Output as JSON')
+    .action(async (opts) => {
+      try {
+        const client = await getClient();
+        const resp = await fetch(`${client.appsUrl}/api/apps/${opts.app}/manifest`, { headers: client.headers });
+        if (!resp.ok) throw new Error(`API error: ${resp.status}`);
+        const manifest = await resp.json();
+        const states = manifest.states || {};
+
+        if (Object.keys(states).length === 0) {
+          console.log('No screens found.');
+          return;
+        }
+
+        console.log(`Scanning ${Object.keys(states).length} screens...\n`);
+
+        if (!opts.llm) {
+          // Quick regex-based gap detection
+          for (const [name, state] of Object.entries(states)) {
+            if (state.type !== 'StitchedScreen') continue;
+            const html = state.html || '';
+            const existingBinds = (html.match(/data-zea-bind="([^"]+)"/g) || []).map(b => b.match(/"([^"]+)"/)[1]);
+            const hasTable = html.includes('<table');
+            const hasKPIs = (html.match(/metric|kpi|KPI|AUM|total/gi) || []).length >= 2;
+
+            console.log(`${name}: ${existingBinds.length} bindings`);
+            if (existingBinds.length === 0 && (hasTable || hasKPIs)) {
+              console.log(`  ⚠️  No bindings — run: zea screen functionalize --llm`);
+            }
+          }
+          return;
+        }
+
+        // LLM-powered gap detection
+        const screensContext = Object.entries(states)
+          .filter(([, s]) => s.type === 'StitchedScreen')
+          .map(([name, s]) => ({
+            name,
+            html_size: (s.html || '').length,
+            existing_bindings: (s.html || '').match(/data-zea-bind="([^"]+)"/g)?.map(b => b.match(/"([^"]+)"/)[1]) || [],
+            html_preview: (s.html || '').slice(0, 3000)
+          }));
+
+        const gapPrompt = `Escaneá estas pantallas de ZEA Platform y detectá componentes sin API.
+
+APIs disponibles:
+- GET /gp/dashboard → {active_funds, active_lps, aum, pending_capital_calls, total_called, total_paid}
+- GET /gp/funds → [{id, name, type, status, total_size, currency}]
+- GET /gp/investors → [{id, name, email, investor_type}]
+- GET /gp/capital-calls → [{id, fund_name, total_amount, status, issue_date, due_date}]
+- POST /gp/funds, POST /gp/investors, POST /gp/capital-calls
+
+Para cada pantalla, analizá si todos sus componentes visuales tienen data-zea-bind con API disponible.
+Si un componente no tiene API, devolvé:
+- qué componente es
+- qué endpoint/tabla se necesita crear
+- qué legos usar (venture data add-table, venture api add-endpoint)
+
+Devolvé SOLO este JSON (sin markdown):
+{
+  "screens": [
+    {
+      "name": "...",
+      "total_components": N,
+      "mapped": N,
+      "gaps": [
+        {
+          "component": "nombre del componente",
+          "status": "missing_api",
+          "suggested_table": "nombre_tabla",
+          "suggested_endpoint": "GET /gp/nombre",
+          "legos_needed": ["zea venture data add-table ...", "zea venture api add-endpoint ..."],
+          "priority": "high" | "medium" | "low"
+        }
+      ],
+      "ok": ["componente → endpoint.campo"]
+    }
+  ],
+  "summary": {
+    "total_screens": N,
+    "total_gaps": N,
+    "critical_gaps": N
+  }
+}`;
+
+        const analysis = await callLLM(gapPrompt, JSON.stringify(screensContext, null, 2));
+
+        if (opts.json) {
+          console.log(JSON.stringify(analysis, null, 2));
+          return;
+        }
+
+        console.log(chalk.bold(`Gap Analysis — ${analysis.screens?.length || 0} screens\n`));
+
+        for (const screen of (analysis.screens || [])) {
+          console.log(chalk.cyan(`${screen.name}: ${screen.mapped}/${screen.total_components} mapped`));
+          for (const g of (screen.gaps || [])) {
+            const icon = g.priority === 'high' ? '🔴' : g.priority === 'medium' ? '🟡' : '🟢';
+            console.log(`  ${icon} ${g.component} → ${g.suggested_endpoint || g.suggested_table}`);
+            console.log(`     Legos: ${(g.legos_needed || []).join(', ')}`);
+          }
+          for (const ok of (screen.ok || [])) {
+            console.log(`  ✅ ${ok}`);
+          }
+          console.log('');
+        }
+
+        console.log(chalk.bold(`Total gaps: ${analysis.summary?.total_gaps || 0} (${analysis.summary?.critical_gaps || 0} critical)`));
+        console.log(`\nFix with: zea branch plan --gap '...' --llm`);
+
+      } catch (e) {
+        console.error('Error:', e.message);
+      }
+    });
+
+  // ─── analyze --file (Excel) ──────────────────────────────
+  screenCmd.command('analyze-file')
+    .description('Analyze an Excel file and suggest DB mapping (uses LLM)')
+    .requiredOption('--file <path>', 'Excel file path')
+    .option('--llm', 'Use LLM for semantic column analysis')
+    .option('--json', 'Output as JSON')
+    .action(async (opts) => {
+      try {
+        const pandas = await import('child_process').then(m => m.execSync(
+          `python3 -c "
+import pandas as pd, json
+f = '${opts.file}'
+sheets = pd.read_excel(f, sheet_name=None)
+result = {'file': f, 'sheets': {}}
+for name, df in sheets.items():
+    result['sheets'][name] = {
+        'row_count': len(df),
+        'columns': [{'name': str(c), 'dtype': str(df[c].dtype), 'sample_values': [str(v) for v in df[c].head(3).tolist() if pd.notna(v)]} for c in df.columns]
+    }
+print(json.dumps(result, indent=2))
+"`, { encoding: 'utf8', timeout: 15000 }
+        ));
+
+        const data = JSON.parse(pandas.toString());
+
+        if (!opts.llm) {
+          console.log(JSON.stringify(data, null, 2));
+          return;
+        }
+
+        const importPrompt = `Analizá este Excel de Venture Capital y sugerí el mapeo a la base de datos ZEA.
+
+Entidades disponibles:
+- funds: {name, type, status, total_size, currency, hard_cap}
+- lps (investors): {name, email, investor_type, is_qualified_investor}
+- commitments: {fund_id, lp_id, amount}
+- capital_calls: {fund_id, call_number, issue_date, due_date, total_amount, status}
+- payments: {capital_call_item_id, paid_amount, payment_date, payment_method}
+
+Reglas:
+- Montos en Excel suelen estar en unidades (USD), en DB son centavos → multiplicar ×100
+- Si una columna referencia otra entidad por nombre (ej: fund='Venture Fund I'), hay que hacer lookup
+- Si faltan campos requeridos (ej: investor_type), sugerir default
+
+Devolvé SOLO este JSON:
+{
+  "sheets_analysis": {
+    "nombre_hoja": {
+      "entity": "funds" | "lps" | "commitments" | "capital_calls" | "payments" | "unknown",
+      "confidence": 0.0-1.0,
+      "mapping": {"columna_excel": "campo_db"},
+      "transformations": {"columna": "×100" | "lookup:funds.name" | "default:VENTURE_CAPITAL"},
+      "warnings": ["faltan campos", "tipo ambiguo"],
+      "import_order": 1
+    }
+  },
+  "import_plan": ["funds", "investors", "commitments", "capital_calls", "payments"],
+  "estimated_rows": N
+}`;
+
+        const analysis = await callLLM(importPrompt, JSON.stringify(data, null, 2));
+
+        if (opts.json) {
+          console.log(JSON.stringify(analysis, null, 2));
+          return;
+        }
+
+        console.log(chalk.bold(`\nExcel Analysis — ${Object.keys(data.sheets).length} sheets\n`));
+        for (const [sheet, info] of Object.entries(analysis.sheets_analysis || {})) {
+          console.log(chalk.cyan(`${sheet} → ${info.entity} (${(info.confidence * 100).toFixed(0)}%)`));
+          for (const [col, field] of Object.entries(info.mapping || {})) {
+            const xform = info.transformations?.[col];
+            console.log(`  ${col} → ${field}${xform ? ' (' + xform + ')' : ''}`);
+          }
+          if (info.warnings?.length) info.warnings.forEach(w => console.log(`  ⚠️  ${w}`));
+          console.log('');
+        }
+        console.log(chalk.bold(`Import plan: ${(analysis.import_plan || []).join(' → ')}`));
+        console.log(`\nRun: zea venture data import --file ${opts.file} --llm --yes`);
+
+      } catch (e) {
+        console.error('Error:', e.message);
+      }
+    });
+
 }
