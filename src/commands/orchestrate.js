@@ -30,10 +30,24 @@ async function askOrchestrator(message) {
 
   // Inject current platform state
   try {
-    const verify = execSync('docker exec zea_opencode_local sh -c "cd /workspace/zea-cli && node src/index.js verify --app sudlich_ventures --json 2>&1"', { encoding: 'utf8', timeout: 15000 });
-    const design = execSync('docker exec zea_opencode_local sh -c "cd /workspace/zea-cli && node src/index.js design status --app sudlich_ventures 2>&1"', { encoding: 'utf8', timeout: 10000 });
-    const platformState = { verify: verify.trim(), design: design.trim(), zea_status: 'docker exec zea_opencode_local sh -c "cd /workspace/zea-cli && node src/index.js diagnose --json 2>&1"' };
-    system = system.replace('{{PLATFORM_STATE}}', JSON.stringify(platformState, null, 2));
+    const verifyRaw = execSync('docker exec zea_opencode_local sh -c "cd /workspace/zea-cli && node src/index.js verify --app sudlich_ventures --json 2>&1"', { encoding: 'utf8', timeout: 15000 });
+    const verify = JSON.parse(verifyRaw.trim());
+    const checks = verify.checks || {};
+    
+    const designRaw = execSync('docker exec zea_opencode_local sh -c "cd /workspace/zea-cli && node src/index.js design status --app sudlich_ventures 2>&1"', { encoding: 'utf8', timeout: 10000 });
+    
+    const state = {
+      apis: {
+        dashboard: checks.dashboard === 'ok' ? '✅ YA EXISTE' : '❌ FALTA',
+        funds: checks.funds === 'ok' ? '✅ YA EXISTE' : '❌ FALTA',
+        investors: checks.investors === 'ok' ? '✅ YA EXISTE' : '❌ FALTA'
+      },
+      screens: designRaw.trim().slice(0, 500),
+      active_funds: 'verificar con curl /gp/dashboard',
+      NOTA: 'SI una API dice "YA EXISTE", NO la crees de nuevo. Solo functionalizá pantallas o diagnosticá problemas.'
+    };
+    
+    system = system.replace('{{PLATFORM_STATE}}', JSON.stringify(state, null, 2));
   } catch {
     system = system.replace('{{PLATFORM_STATE}}', '(estado no disponible)');
   }
