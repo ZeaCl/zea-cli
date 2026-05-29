@@ -1,9 +1,17 @@
 import chalk from 'chalk';
 import { execSync } from 'child_process';
+import { WebSocket } from 'ws';
 
 const DEEPSEEK_API = 'https://api.deepseek.com/v1/chat/completions';
 const DEEPSEEK_KEY = process.env.DEEPSEEK_API_KEY || process.env.DEEPSEEK_API_KEYS || '';
 const OPENCODE = process.env.OPENCODE_URL || 'http://localhost:4096';
+const WS_URL = process.env.WS_URL || 'ws://localhost:4091';
+
+let ws = null;
+function wsEmit(event, data) {
+  if (!ws || ws.readyState !== 1) return;
+  try { ws.send(JSON.stringify({ event, data })); } catch {}
+}
 
 const ALLOWLISTS = {
   db: [/^zea db\b/, /^zea venture data\b/],
@@ -94,6 +102,8 @@ async function executePlan(plan) {
     console.log(chalk.cyan(`\n[${i+1}/${plan.plan.length}] ${expert}-expert:`));
     console.log(chalk.dim(`  ${cmdWithContext}`));
 
+    wsEmit('step:start', { step: i+1, total: plan.plan.length, expert, command: cmdWithContext });
+
     try {
       // Execute via opencode HTTP API (avoids shell escaping issues)
       const sidResp = await fetch(`${OPENCODE}/session`, {
@@ -118,15 +128,19 @@ async function executePlan(plan) {
       console.log(chalk.green(`  ✅ ${response.slice(0, 100)}`));
       context[`step${i+1}_result`] = 'ok';
       results.push({ step: i+1, expert, command: cmdWithContext, status: 'ok', response });
+      wsEmit('step:ok', { step: i+1, expert, result: response.slice(0, 200) });
 
     } catch (e) {
       console.log(chalk.red(`  ❌ ${e.message?.slice(0, 100)}`));
       results.push({ step: i+1, expert, command: cmdWithContext, status: 'fail', error: e.message });
+      wsEmit('step:fail', { step: i+1, error: e.message?.slice(0, 200) });
 
       // If fails, delegate to infra-expert
+      let retryCount = 0;
       if (i < 2) { // retry up to 2 times
         try {
           console.log(chalk.yellow(`  → Delegando a infra-expert...`));
+          wsEmit('delegate', { from: expert, to: 'infra', reason: e.message?.slice(0, 100) });
           const infraSidResp = await fetch(`${OPENCODE}/session`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ title: `infra-fix-${i+1}`, directory: '/workspace' })
@@ -158,6 +172,8 @@ async function executePlan(plan) {
             })
           });
           const retryData = await retryMsgResp.json();
+          retryCount++;
+          wsEmit('step:retry', { step: i+1, attempt: retryCount + 1 });
           console.log(chalk.green(`  ✅ Retry OK: ${(retryData.parts || []).filter(p => p.type === 'text').map(p => p.text).join(' ').slice(0, 100)}`));
         } catch (e2) {
           // Give up after retry
@@ -174,13 +190,25 @@ export function register(program) {
     .description('Orchestrate a client request across expert sessions')
     .argument('<message>', 'Client request')
     .option('--dry-run', 'Only plan, do not execute')
+    .option('--ws', 'Stream events to WebSocket (ws://localhost:4091)')
     .action(async (message, opts) => {
       try {
+        // Connect to WebSocket if --ws flag
+        if (opts.ws) {
+          ws = new WebSocket(WS_URL);
+          await new Promise((resolve) => {
+            ws.on('open', resolve);
+            setTimeout(resolve, 3000); // timeout fallback
+          });
+        }
+
         console.log(chalk.bold(`\n═══ Orchestrating: "${message.slice(0, 80)}" ═══`));
 
         // Step 1: Ask orchestrator for plan
         console.log(chalk.dim('\nAsking orchestrator...'));
         const plan = await askOrchestrator(message);
+
+        wsEmit('plan:ready', { analysis: plan.analysis, steps: plan.plan?.length || 0 });
 
         if (plan.error) {
           console.log(chalk.yellow(`\n${plan.error}`));
@@ -206,6 +234,7 @@ export function register(program) {
         const fail = result.results?.filter(r => r.status === 'fail').length || 0;
         console.log(chalk.bold(`\n═══ Result: ${ok}✅ ${fail}❌ ═══`));
         console.log(chalk.green(`\nResponse: ${plan.response || 'Done.'}`));
+        wsEmit('done', { ok, fail, response: plan.response });
 
       } catch (e) {
         console.error('Error:', e.message);
