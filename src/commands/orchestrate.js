@@ -7,10 +7,11 @@ const OPENCODE = process.env.OPENCODE_URL || 'http://localhost:4096';
 
 const ALLOWLISTS = {
   db: [/^zea db\b/, /^zea venture data\b/],
-  api: [/^zea venture api\b/],
+  api: [/^zea venture api\b/, /^curl\b/],
   screen: [/^zea screen\b/, /^zea design\b/, /^zea validate\b/],
-  infra: [/^zea diagnose\b/, /^zea verify\b/, /^docker\b/],
+  infra: [/^zea diagnose\b/, /^zea verify\b/, /^docker\b/, /^curl\b/],
   builder: [/^git\b/, /^npm\b/, /^node\b/, /^mkdir\b/, /^echo\b/],
+  'data-import': [/^python3\b/, /^zea venture data import\b/, /^zea screen analyze-file\b/],
 };
 
 function validateCommand(expert, command) {
