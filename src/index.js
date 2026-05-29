@@ -29,6 +29,10 @@ import { register as registerLearn } from './commands/learn.js';
 import { register as registerExperiment } from './commands/experiment.js';
 import { register as registerGlia } from './commands/glia.js';
 import { register as registerScreen } from './commands/screen.js';
+import { register as registerBranch } from './commands/branch.js';
+import { register as registerDb } from './commands/db.js';
+import { register as registerDiagnose } from './commands/diagnose.js';
+import { register as registerConfig } from './commands/config.js';
 
 const program = new Command();
 
@@ -57,6 +61,10 @@ registerLearn(program);
 registerExperiment(program);
 registerGlia(program);
 registerScreen(program);
+registerBranch(program);
+registerDb(program);
+registerDiagnose(program);
+registerConfig(program);
 
 program.command('mcp')
   .description('Start Model Context Protocol (MCP) server')
