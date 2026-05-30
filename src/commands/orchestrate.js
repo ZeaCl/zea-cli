@@ -20,9 +20,14 @@ const expertDirs = {
 };
 function systemPromptFor(expert) {
   const dir = expertDirs[expert] || expert;
-  try {
-    return execSync(`cat ~/.zea/experts/${dir}/SYSTEM.md 2>/dev/null || echo ''`, { encoding: 'utf8', timeout: 3000 }).trim() || '';
-  } catch { return ''; }
+  const paths = [
+    `experts/${dir}/SYSTEM.md`,
+    `${os.homedir()}/.zea/experts/${dir}/SYSTEM.md`
+  ];
+  for (const p of paths) {
+    try { return fs.readFileSync(p, 'utf8').trim(); } catch {}
+  }
+  return '';
 }
 
 const ALLOWLISTS = {
@@ -181,9 +186,11 @@ export function register(program) {
       try {
         const domain = opts.domain || 'venture';
         
-        // Load domain manifest and inject into system prompt
-        let system = systemPromptFor('orchestrator');
-        const manifestPath = `${os.homedir()}/.zea/domains/${domain}/manifest.json`;
+        // Load domain manifest — check package path first, then ~/.zea/
+        let manifestPath = `domains/${domain}/manifest.json`;
+        if (!fs.existsSync(manifestPath)) {
+          manifestPath = `${os.homedir()}/.zea/domains/${domain}/manifest.json`;
+        }
         try {
           const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
           system = system
