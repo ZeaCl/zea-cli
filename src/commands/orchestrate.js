@@ -13,6 +13,16 @@ function wsEmit(event, data) {
   try { ws.send(JSON.stringify({ event, data })); } catch {}
 }
 
+const expertDirs = {
+  db: 'db', api: 'api', screen: 'screen', infra: 'infra', builder: 'builder', 'data-import': 'data-import'
+};
+function systemPromptFor(expert) {
+  const dir = expertDirs[expert] || expert;
+  try {
+    return execSync(`cat ~/.zea/experts/${dir}/SYSTEM.md 2>/dev/null || echo ''`, { encoding: 'utf8', timeout: 3000 }).trim() || '';
+  } catch { return ''; }
+}
+
 const ALLOWLISTS = {
   db: [/^zea db\b/, /^zea venture data\b/],
   api: [/^zea venture api\b/, /^curl\b/],
@@ -119,6 +129,7 @@ async function executePlan(plan) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model: { providerID: 'deepseek', modelID: 'deepseek-v4-pro' },
+          system: systemPromptFor(expert),
           parts: [{ type: 'text', text: cmdWithContext }]
         })
       });
@@ -152,6 +163,7 @@ async function executePlan(plan) {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               model: { providerID: 'deepseek', modelID: 'deepseek-v4-pro' },
+              system: systemPromptFor('infra'),
               parts: [{ type: 'text', text: `ERROR: ${cmdWithContext} failed. ${e.message?.slice(0, 200)}. Diagnose and fix.` }]
             })
           });
@@ -168,6 +180,7 @@ async function executePlan(plan) {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               model: { providerID: 'deepseek', modelID: 'deepseek-v4-pro' },
+              system: systemPromptFor(expert),
               parts: [{ type: 'text', text: cmdWithContext }]
             })
           });
