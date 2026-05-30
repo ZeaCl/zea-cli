@@ -3,6 +3,7 @@ import { execSync } from 'child_process';
 import { WebSocket } from 'ws';
 import fs from 'fs';
 import os from 'os';
+import path from 'path';
 
 const DEEPSEEK_API = 'https://api.deepseek.com/v1/chat/completions';
 const DEEPSEEK_KEY = process.env.DEEPSEEK_API_KEY || process.env.DEEPSEEK_API_KEYS || '';
@@ -45,9 +46,35 @@ function validateCommand(expert, command) {
   return allowlist.some(pattern => pattern.test(command));
 }
 
-async function askOrchestrator(systemPrompt, message) {
+async function askOrchestrator(systemPrompt, message, sessionName) {
   const system = systemPrompt || 'Sos el orquestador de ZEA Platform. Generá un plan JSON.';
 
+  // Try opencode session for multi-turn context
+  if (sessionName) {
+    const sid = await ensureOrchSession(sessionName);
+    if (sid) {
+      try {
+        const resp = await fetch(`${OPENCODE}/session/${sid}/message`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: { providerID: 'deepseek', modelID: 'deepseek-v4-pro' },
+            parts: [{ type: 'text', text: message }]
+          })
+        });
+        const data = await resp.json();
+        const text = (data.parts || []).filter(p => p.type === 'text').map(p => p.text).join('\n');
+        if (text) {
+          try {
+            const jsonMatch = text.match(/\{[\s\S]*"analysis"[\s\S]*"plan"[\s\S]*"response"[\s\S]*\}/);
+            if (jsonMatch) return JSON.parse(jsonMatch[0]);
+          } catch {}
+        }
+      } catch { /* opencode failed, fallback to DeepSeek */ }
+    }
+  }
+
+  // Fallback: call DeepSeek directly
   const resp = await fetch(DEEPSEEK_API, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${DEEPSEEK_KEY}` },
@@ -61,8 +88,36 @@ async function askOrchestrator(systemPrompt, message) {
       response_format: { type: 'json_object' }
     })
   });
-  const data = await resp.json();
-  return JSON.parse(data.choices?.[0]?.message?.content || '{}');
+  const dsData = await dsResp.json();
+  return JSON.parse(dsData.choices?.[0]?.message?.content || '{}');
+}
+
+// Session management — multi-turn context
+// Session management — multi-turn context via opencode
+let orchidSessions = {};
+function getOrCreateOrchSession(sessionName) {
+  if (!sessionName) return null;
+  if (orchidSessions[sessionName]) return orchidSessions[sessionName];
+  return null; // Will create lazily via the message API
+}
+
+async function ensureOrchSession(sessionName) {
+  if (!sessionName) return null;
+  if (orchidSessions[sessionName]) return orchidSessions[sessionName];
+  
+  try {
+    const resp = await fetch(`${OPENCODE}/session`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: `orch-${sessionName.slice(0, 30)}`, directory: '/workspace' })
+    });
+    const data = await resp.json();
+    if (data.id) {
+      orchidSessions[sessionName] = data.id;
+      return data.id;
+    }
+  } catch (e) { console.error('Session error:', e.message); }
+  return null;
 }
 
 async function executePlan(plan) {
@@ -182,6 +237,7 @@ export function register(program) {
     .option('--dry-run', 'Only plan, do not execute')
     .option('--ws', 'Stream events to WebSocket (ws://localhost:4091)')
     .option('--domain <name>', 'Domain name (default: venture)')
+    .option('--session <name>', 'Session name for multi-turn context (e.g., chat_id)')
     .action(async (message, opts) => {
       try {
         const domain = opts.domain || 'venture';
@@ -223,7 +279,7 @@ export function register(program) {
 
         // Step 1: Ask orchestrator for plan
         console.log(chalk.dim('\nAsking orchestrator...'));
-        const plan = await askOrchestrator(system, message);
+        const plan = await askOrchestrator(system, message, opts.session);
 
         wsEmit('plan:ready', { analysis: plan.analysis, steps: plan.plan?.length || 0 });
 
