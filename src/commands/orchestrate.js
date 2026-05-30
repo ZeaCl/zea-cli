@@ -242,6 +242,9 @@ export function register(program) {
       try {
         const domain = opts.domain || 'venture';
         
+        // Load system prompt for orchestrator
+        let system = systemPromptFor('orchestrator');
+        
         // Load domain manifest — check package path first, then ~/.zea/
         let manifestPath = `domains/${domain}/manifest.json`;
         if (!fs.existsSync(manifestPath)) {
