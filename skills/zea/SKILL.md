@@ -1,176 +1,107 @@
 ---
 name: zea
-description: "ZEA Platform — CLI, API y skills para agentes de código. Usar este skill como punto de entrada a toda la plataforma."
+description: "ZEA Platform — CLI, API Gateway y skills para agentes de código. Usar este skill como punto de entrada a toda la plataforma. Multi-dominio: Venture Capital, Psicopedagogía, Deportes, etc."
 ---
 
-# ZEA Platform — Agent Skill
+# ZEA Platform — Agent Skill (Umbrella)
 
-Skill umbrella para ZEA Platform. Documenta skills disponibles, CLI, y la API de Glia.
+Skill principal de ZEA Platform. Documenta todos los skills, CLI commands, API Gateway, y arquitectura multi-dominio.
 
-## 🧱 Lego Pieces (skills disponibles)
+## 🧱 Skills disponibles (17)
 
-| Domain | CLI | Skill |
-|--------|-----|-------|
-| App | `zea app` | app/SKILL.md |
-| Design | `zea design` | design/SKILL.md |
-| Venture | `zea venture` | venture/SKILL.md |
-| SDUI | `zea sdui` | sdui/SKILL.md |
-| Doctor | `zea doctor` | doctor/SKILL.md |
-| Agent | `zea agent` | agent/SKILL.md |
-| Workflow | `zea workflow` | workflow/SKILL.md |
-| Sensor | `zea sensor` | sensor/SKILL.md |
-| Orchestrate | `zea agent plan` | orchestrate/SKILL.md |
+| Skill | CLI | Descripción |
+|---|---|---|
+| **zea-agent** | `zea orchestrate` | **Entry point para agentes externos** — orquesta tareas complejas delegando a expertos |
+| app | `zea app` | Gestión de apps: registrar, ver manifiesto, listar |
+| design | `zea design` | Diseño: importar screens Stitch, cambiar colores |
+| venture | `zea venture` | Venture: fondos, investors, capital calls, data |
+| sdui | `zea sdui` | Server-Driven UI: manifiestos, estados, intents |
+| doctor | `zea doctor` | Diagnóstico: health check de 7 capas |
+| agent | `zea agent` | Gestión de agentes Glia (legacy) |
+| workflow | `zea workflow` | Cerebelum Workflows: Human-in-the-Loop |
+| sensor | `zea sensor` | Captura de datos: audio, WhatsApp, feedback |
+| screen-functionalizer | `zea screen` | Pipeline: analizar → functionalizar → validar pantallas Stitch |
+| db-dev | `zea db` | Desarrollo DB: schema, migraciones, RLS |
+| api-dev | `zea venture api` | Desarrollo API: endpoints, controllers, routers |
+| coach | — | Coach socrático: preguntas cuando el agente se traba |
+| xlsx | — | Lectura/escritura de Excel con pandas + openpyxl |
+| xlsx-import | `zea venture data import` | Pipeline: Excel → mapear → validar → importar |
+| orchestrate | `zea orchestrate` | Orquestador: planificar + delegar a expertos |
+| maintenance | `zea diagnose` / `zea verify` | Mantenimiento: diagnóstico, fixes, REML |
 
-## 🤖 Agentes
+## 🏗️ Arquitectura
 
-ZEA tiene dos agentes independientes. Cada uno con su propio contexto. Un agente puede delegar tareas al otro cuando lo necesita.
+ZEA Platform tiene 7 expertos especializados:
+- **db-expert**: SQL, RLS, migraciones
+- **api-expert**: Endpoints HTTP, controllers
+- **screen-expert**: Stitch → SDUI, data-zea-bind, functionalize
+- **infra-expert**: Diagnóstico, fixes, deploys
+- **builder-expert**: Crear nuevos comandos CLI
+- **data-import-expert**: Excel/CSV → DB
+- **orquestador**: Planifica y delega a los expertos (hub-and-spoke)
 
-### Glia — Planificación y razonamiento
-Para analizar, planificar, usar skills y herramientas de negocio.
+## 🚀 Comandos esenciales
 
-```
-POST /api/agent/chat
-Content-Type: application/json
-Authorization: Bearer <JWT>
-```
-
-**Request:**
-```json
-{
-  "text": "Planificá cómo cambiar el color primario",
-  "plan_mode": false,
-  "session_id": "opcional-para-seguimiento"
-}
-```
-
-**Response:** SSE stream con eventos `reasoning`, `tool`, `text`, `question`, `done`.
-
-Glia puede delegar ejecución a opencode cuando necesita bash, CLI o modificar archivos.
-
-### opencode — Ejecución
-Para bash, CLI, ZEA CLI, modificar archivos, git.
-
-```
-POST http://opencode:4096/session
-POST http://opencode:4096/session/{id}/message
-GET  http://opencode:4096/session/{id}/message
-```
-
-opencode puede delegar análisis a Glia cuando necesita planificar o razonar.
-
-### ¿Cuál usar como principal?
-| Si necesitás... | Conectate a |
-|---|---|
-| Analizar, planificar, preguntar | **Glia** |
-| Ejecutar bash, CLI, modificar archivos | **opencode** |
-| Ambos | Cualquiera — delega al otro internamente |
-
-### Agentes que se delegan entre sí
-
-```
-Usuario → Glia (principal)
-  Glia analiza → decide que necesita ejecutar
-  Glia → POST opencode/session → opencode ejecuta
-  opencode responde → Glia interpreta → responde al usuario
-
-Usuario → opencode (principal)
-  opencode ejecuta → necesita planificar
-  opencode → curl Glia/api/agent/chat → Glia planifica
-  Glia responde → opencode usa el plan → ejecuta
-```
-
-### Ejemplo con Glia como principal
+### Orquestar (EL MÁS IMPORTANTE)
 ```bash
-curl -N -X POST http://glia.zea.localhost/api/agent/chat \
-  -H "Authorization: Bearer $ZEA_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"text":"¿Cuántos fondos hay?","plan_mode":false}'
+zea orchestrate "Creá un fondo Tech VC de $50M" --domain venture
+zea orchestrate "El dashboard no muestra KPIs"
+zea orchestrate "Importá este Excel a la plataforma"
 ```
 
-### Ejemplo con opencode como principal
+### API Gateway (para integración programática)
 ```bash
-# Crear sesión
-curl -X POST http://opencode:4096/session -d '{"title":"chat"}'
-# Enviar mensaje
-curl -X POST http://opencode:4096/session/{id}/message \
-  -d '{"model":{"providerID":"deepseek","modelID":"deepseek-v4-pro"},"parts":[{"type":"text","text":"¿Cuántos fondos hay?"}]}'
+zea server start                         # API en :4000 + WebSocket en :4091
+curl POST /v1/orchestrate -d '{"message":"...","domain":"venture"}'
 ```
 
-## 🔐 Autenticación
-
-### Si NO tenés token
-1. Pedile a un humano que ejecute:
-```
-zea auth login
-zea token create --name "nombre-del-agente"
-```
-2. Copiá el token que aparece (solo se muestra una vez)
-3. Configuralo: `export ZEA_TOKEN=<token>`
-
-### Si YA tenés token
-Usalo en el header de cada request:
-```
-Authorization: Bearer $ZEA_TOKEN
-```
-
-### Gestionar tokens
+### Pantallas
 ```bash
-zea token list          # ver tokens activos
-zea token revoke <id>   # revocar un token
-zea org list            # organizaciones disponibles
-zea org switch <id>     # cambiar org activa
+zea screen functionalize --app sudlich_ventures --screen dashboard --llm
+zea screen gap-detect --app sudlich_ventures --llm
+zea design import-screen --app sudlich_ventures --stitch-key $STITCH_KEY --screen-id X --state Y
 ```
 
-### Ejemplo completo
+### Datos
 ```bash
-# 1. Configurar token (una vez)
-export ZEA_TOKEN=zea_pat_xxxxxxxxxxxxx
-
-# 2. Usar la API de Glia
-curl -N -X POST http://glia.zea.localhost/api/agent/chat \
-  -H "Authorization: Bearer $ZEA_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"text":"¿Cuántos fondos hay?","plan_mode":false}'
-```
-
-## 📋 Comandos CLI rápidos
-
-### Design
-```bash
-zea design list-screens --app <app_id>
-zea design import-screen --app <app_id> --screen-id <sid> --state <name>
-```
-
-### Venture
-```bash
+zea venture data import --file datos.xlsx --yes
 zea venture fund list
-zea venture fund create --name "X" --hard-cap 5000000 --currency USD
-zea venture capital-call list
-zea venture investor list
-zea venture dashboard
+zea db diff && zea db push --yes
 ```
 
-### SDUI
+### Diagnóstico
 ```bash
-zea sdui manifest <app_id>
-zea sdui start <app_id>
+zea diagnose --json
+zea verify --app sudlich_ventures --json
+zea validate --app sudlich_ventures --screen dashboard --visual
+zea qa status
 ```
 
-### App
-```bash
-zea app list
-zea app show <app_id>
-zea app register <manifest.json>
-```
+## 🌐 Multi-dominio
 
-### Doctor
-```bash
-zea doctor check            # Diagnóstico completo
-zea doctor check --fix      # Diagnóstico + reparación automática
-```
-
-## 🛠 Instalación
+ZEA soporta múltiples dominios de negocio. Cada dominio tiene su propio schema de DB, APIs, y pantallas:
 
 ```bash
-npx skills add ZeaCl/zea-agent-skill --yes --global
+zea orchestrate --domain venture "..."   # Venture Capital
+zea orchestrate --domain psycho "..."    # Psicopedagogía
+zea orchestrate --domain sports "..."    # Deportes
 ```
+
+Los dominios se definen en `domains/{name}/manifest.json`.
+
+## 📋 Protocolo de respuesta
+
+Los expertos responden con formato estructurado:
+- ✅ [COMPLETADO] → éxito con evidencia concreta
+- ❌ [FALLÓ] → error que necesita diagnóstico
+- ⚠️ [PARCIAL] → completado con observaciones
+
+Si un comando falla, el orquestador automáticamente delega a infra-expert para diagnóstico y fix.
+
+## 🤖 Para agentes de IA externos
+
+Si sos un agente externo (Claude, Copilot, Cursor) y querés usar ZEA:
+1. Instalá el skill: `npx skills add ZeaCl/zea-agent-skill --skill zea-agent`
+2. Usá `zea orchestrate` para tareas complejas
+3. Usá `zea server start` para exponer la API
+4. Consultá `skills/zea-agent/SKILL.md` para la guía completa
