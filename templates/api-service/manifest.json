@@ -1,0 +1,34 @@
+{
+  "template_name": "api-service",
+  "description": "Generates a complete Phoenix/Elixir API service from an Open Spec requirements document. Includes controller, router, endpoint, Dockerfile, docker-compose entry, Caddy route, and SQL schema.",
+  "version": "1.0.0",
+  "placeholders": {
+    "APP_NAME": {"type": "string", "example": "psycho_api"},
+    "APP_MODULE": {"type": "string", "example": "PsychoApi"},
+    "API_PREFIX": {"type": "string", "example": "pp"},
+    "API_PORT": {"type": "integer", "example": 4083},
+    "DOMAIN_NAME": {"type": "string", "example": "psycho"},
+    "DOMAIN_LABEL": {"type": "string", "example": "Psicopedagogía"},
+    "DB_NAME": {"type": "string", "example": "psycho_prod"},
+    "ENTITIES_JSON": {"type": "json_array", "example": "[{\"name\":\"patients\",\"fields\":[...]}]"}
+  },
+  "files_generated": [
+    "mix.exs",
+    "Dockerfile",
+    "config/config.exs",
+    "lib/{app_name}/application.ex",
+    "lib/{app_name}_web/endpoint.ex",
+    "lib/{app_name}_web/router.ex",
+    "lib/{app_name}_web/controllers/{prefix}_controller.ex",
+    "lib/{app_name}/repo.ex",
+    "lib/{app_name}/release.ex",
+    "init-{name}.sql",
+    "docker-compose.entry.yml",
+    "caddy.route.txt"
+  ],
+  "validation": {
+    "step1": "mix compile",
+    "step2": "mix test --no-start",
+    "step3": "docker compose build {name}-api"
+  }
+}
