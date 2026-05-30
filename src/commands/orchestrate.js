@@ -88,7 +88,7 @@ async function askOrchestrator(systemPrompt, message, sessionName) {
       response_format: { type: 'json_object' }
     })
   });
-  const dsData = await dsResp.json();
+  const dsData = await resp.json();
   return JSON.parse(dsData.choices?.[0]?.message?.content || '{}');
 }
 
