@@ -1,0 +1,68 @@
+{
+  "name": "DomainCreation",
+  "label": "Creación de Dominio — Pipeline completo",
+  "description": "Workflow de Cerebelum para crear un dominio nuevo en ZEA Platform. 4 fases con HITL (Human-in-the-Loop). Desde Customer Discovery hasta implementación.",
+  "version": "1.0.0",
+  "triggers": ["cliente quiere crear su app", "nuevo dominio", "onboarding"],
+  "steps": [
+    {
+      "id": "discovery",
+      "name": "Customer Discovery",
+      "expert": "value-proposition",
+      "description": "Entrevista al cliente usando Strategyzer. Extrae Pains/Gains/Jobs. Genera Value Proposition Canvas.",
+      "input": "transcripción o descripción del cliente",
+      "output": "Value Proposition Canvas validado",
+      "hitl": true,
+      "hitl_question": "¿La propuesta de valor representa bien tu negocio?",
+      "timeout_seconds": 300
+    },
+    {
+      "id": "specification",
+      "name": "Especificación Técnica",
+      "expert": "open-spec",
+      "description": "Genera especificación técnica en 3 sub-fases: Requirements → Design → Tasks. Cada sub-fase requiere aprobación.",
+      "input": "Value Proposition Canvas validado",
+      "output": "Especificación Open Spec completa (entities, APIs, screens, tasks)",
+      "depends_on": ["discovery"],
+      "hitl": true,
+      "hitl_question": "¿El plan técnico cubre todo lo que necesitás?",
+      "timeout_seconds": 300,
+      "sub_phases": [
+        {"name": "requirements", "hitl": true},
+        {"name": "design", "hitl": true},
+        {"name": "tasks", "hitl": true}
+      ]
+    },
+    {
+      "id": "generation",
+      "name": "Generación de API",
+      "expert": "builder",
+      "description": "Genera el código de la API Phoenix/Elixir desde el template api-service. Crea controller, router, endpoint, Dockerfile, docker-compose entry, Caddy route, y SQL schema.",
+      "input": "Open Spec Tasks (entidades, APIs, campos)",
+      "output": "Código compilable + docker-compose + Caddy + SQL",
+      "depends_on": ["specification"],
+      "hitl": false,
+      "timeout_seconds": 600
+    },
+    {
+      "id": "implementation",
+      "name": "Implementación",
+      "expert": "orchestrator",
+      "description": "Ejecuta las tareas del Open Spec en orden: DB → API → Deploy → Screen → Verify. Usa el orquestador con retry loop y protocolo ✅/❌.",
+      "input": "Open Spec Tasks + código generado",
+      "output": "Dominio funcional (API corriendo, DB con RLS, pantallas functionalizadas)",
+      "depends_on": ["generation"],
+      "hitl": false,
+      "timeout_seconds": 900,
+      "tasks": [
+        {"id": "T1", "phase": "DB", "expert": "db", "command": "zea db push --domain {{domain}} --yes"},
+        {"id": "T2", "phase": "DEPLOY", "expert": "infra", "command": "docker compose build {{name}}-api && docker compose up -d {{name}}-api"},
+        {"id": "T3", "phase": "VERIFY", "expert": "infra", "command": "zea verify --app {{app_id}} --json"},
+        {"id": "T4", "phase": "SCREEN", "expert": "screen", "command": "zea screen functionalize --app {{app_id}} --screen dashboard --llm"},
+        {"id": "T5", "phase": "VERIFY", "expert": "infra", "command": "zea validate --app {{app_id}} --screen dashboard --visual"}
+      ]
+    }
+  ],
+  "status": "active",
+  "created": "2026-05-29"
+}
