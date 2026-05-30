@@ -1,6 +1,8 @@
 import chalk from 'chalk';
 import { execSync } from 'child_process';
 import { WebSocket } from 'ws';
+import fs from 'fs';
+import os from 'os';
 
 const DEEPSEEK_API = 'https://api.deepseek.com/v1/chat/completions';
 const DEEPSEEK_KEY = process.env.DEEPSEEK_API_KEY || process.env.DEEPSEEK_API_KEYS || '';
@@ -38,38 +40,8 @@ function validateCommand(expert, command) {
   return allowlist.some(pattern => pattern.test(command));
 }
 
-async function askOrchestrator(message) {
-  // Read system prompt from file
-  let system;
-  try {
-    system = execSync('cat ~/.zea/experts/orchestrator/SYSTEM.md', { encoding: 'utf8' });
-  } catch {
-    system = 'Sos el orquestador de ZEA Platform. Generá un plan JSON.';
-  }
-
-  // Inject current platform state
-  try {
-    const verifyRaw = execSync('docker exec zea_opencode_local sh -c "cd /workspace/zea-cli && node src/index.js verify --app sudlich_ventures --json 2>&1"', { encoding: 'utf8', timeout: 15000 });
-    const verify = JSON.parse(verifyRaw.trim());
-    const checks = verify.checks || {};
-    
-    const designRaw = execSync('docker exec zea_opencode_local sh -c "cd /workspace/zea-cli && node src/index.js design status --app sudlich_ventures 2>&1"', { encoding: 'utf8', timeout: 10000 });
-    
-    const state = {
-      apis: {
-        dashboard: checks.dashboard === 'ok' ? '✅ YA EXISTE' : '❌ FALTA',
-        funds: checks.funds === 'ok' ? '✅ YA EXISTE' : '❌ FALTA',
-        investors: checks.investors === 'ok' ? '✅ YA EXISTE' : '❌ FALTA'
-      },
-      screens: designRaw.trim().slice(0, 500),
-      active_funds: 'verificar con curl /gp/dashboard',
-      NOTA: 'SI una API dice "YA EXISTE", NO la crees de nuevo. Solo functionalizá pantallas o diagnosticá problemas.'
-    };
-    
-    system = system.replace('{{PLATFORM_STATE}}', JSON.stringify(state, null, 2));
-  } catch {
-    system = system.replace('{{PLATFORM_STATE}}', '(estado no disponible)');
-  }
+async function askOrchestrator(systemPrompt, message) {
+  const system = systemPrompt || 'Sos el orquestador de ZEA Platform. Generá un plan JSON.';
 
   const resp = await fetch(DEEPSEEK_API, {
     method: 'POST',
@@ -204,22 +176,47 @@ export function register(program) {
     .argument('<message>', 'Client request')
     .option('--dry-run', 'Only plan, do not execute')
     .option('--ws', 'Stream events to WebSocket (ws://localhost:4091)')
+    .option('--domain <name>', 'Domain name (default: venture)')
     .action(async (message, opts) => {
       try {
+        const domain = opts.domain || 'venture';
+        
+        // Load domain manifest and inject into system prompt
+        let system = systemPromptFor('orchestrator');
+        const manifestPath = `${os.homedir()}/.zea/domains/${domain}/manifest.json`;
+        try {
+          const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+          system = system
+            .replace(/{{name}}/g, manifest.name)
+            .replace(/{{label}}/g, manifest.label)
+            .replace(/{{api_prefix}}/g, manifest.api_prefix)
+            .replace(/{{api_port}}/g, String(manifest.api_port))
+            .replace(/{{app_id}}/g, manifest.app_id)
+            .replace(/{{app_url}}/g, manifest.app_url)
+            .replace(/{{entities}}/g, manifest.entities)
+            .replace(/{{out_of_scope_suggestions_json}}/g, JSON.stringify(manifest.out_of_scope_suggestions));
+        } catch { /* use default system prompt without domain vars */ }
+
+        // Inject platform state
+        try {
+          const verifyRaw = execSync('docker exec zea_opencode_local sh -c "cd /workspace/zea-cli && node src/index.js verify --app sudlich_ventures --json 2>&1"', { encoding: 'utf8', timeout: 15000 });
+          const verify = JSON.parse(verifyRaw.trim());
+          const state = { apis: { dashboard: verify.checks?.dashboard, funds: verify.checks?.funds }, domain };
+          system = system.replace('{{PLATFORM_STATE}}', JSON.stringify(state, null, 2));
+        } catch { system = system.replace('{{PLATFORM_STATE}}', '(estado no disponible)'); }
+
         // Connect to WebSocket if --ws flag
         if (opts.ws) {
           ws = new WebSocket(WS_URL);
-          await new Promise((resolve) => {
-            ws.on('open', resolve);
-            setTimeout(resolve, 3000); // timeout fallback
-          });
+          await new Promise((resolve) => { ws.on('open', resolve); setTimeout(resolve, 3000); });
         }
 
         console.log(chalk.bold(`\n═══ Orchestrating: "${message.slice(0, 80)}" ═══`));
+        console.log(chalk.dim(`Domain: ${domain}`));
 
         // Step 1: Ask orchestrator for plan
         console.log(chalk.dim('\nAsking orchestrator...'));
-        const plan = await askOrchestrator(message);
+        const plan = await askOrchestrator(system, message);
 
         wsEmit('plan:ready', { analysis: plan.analysis, steps: plan.plan?.length || 0 });
 
