@@ -1,3 +1,4 @@
+import zeaFetch from '../lib/http.js';
 import { getClient } from '../client.js';
 
 export function register(program) {
@@ -9,7 +10,7 @@ export function register(program) {
     .action(async (options) => {
       try {
         const client = await getClient();
-        const response = await fetch(`${client.apiUrl}/api/personal-access-tokens`, {
+        const response = await zeaFetch(`${client.apiUrl}/api/personal-access-tokens`, {
           method: 'POST',
           headers: client.headers,
           body: JSON.stringify({
@@ -39,7 +40,7 @@ export function register(program) {
     .action(async () => {
       try {
         const client = await getClient();
-        const response = await fetch(`${client.apiUrl}/api/personal-access-tokens`, { headers: client.headers });
+        const response = await zeaFetch(`${client.apiUrl}/api/personal-access-tokens`, { headers: client.headers });
         if (!response.ok) throw new Error(`Failed to list tokens: status ${response.status}`);
 
         const result = await response.json();
@@ -66,7 +67,7 @@ export function register(program) {
     .action(async (tokenId) => {
       try {
         const client = await getClient();
-        const response = await fetch(`${client.apiUrl}/api/personal-access-tokens/${tokenId}`, {
+        const response = await zeaFetch(`${client.apiUrl}/api/personal-access-tokens/${tokenId}`, {
           method: 'DELETE',
           headers: client.headers
         });

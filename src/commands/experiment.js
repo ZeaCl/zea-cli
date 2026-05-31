@@ -1,3 +1,4 @@
+import zeaFetch from '../lib/http.js';
 import { getClient } from '../client.js';
 
 export function register(program) {
@@ -11,7 +12,7 @@ export function register(program) {
     .action(async (opts) => {
       try {
         const client = await getClient();
-        const response = await fetch(`${client.appsUrl}/api/apps/${opts.app}/experiments`, {
+        const response = await zeaFetch(`${client.appsUrl}/api/apps/${opts.app}/experiments`, {
           method: 'POST',
           headers: client.headers,
           body: JSON.stringify({ name: opts.name, app_id: opts.app })
@@ -36,7 +37,7 @@ export function register(program) {
     .action(async (opts) => {
       try {
         const client = await getClient();
-        const response = await fetch(`${client.appsUrl}/api/apps/${opts.app}/experiments`, {
+        const response = await zeaFetch(`${client.appsUrl}/api/apps/${opts.app}/experiments`, {
           headers: client.headers
         });
         const data = await response.json();
@@ -63,7 +64,7 @@ export function register(program) {
     .action(async (opts) => {
       try {
         const client = await getClient();
-        const response = await fetch(`${client.appsUrl}/api/apps/${opts.app}/experiments/${opts.name}`, {
+        const response = await zeaFetch(`${client.appsUrl}/api/apps/${opts.app}/experiments/${opts.name}`, {
           headers: client.headers
         });
         const data = await response.json();
@@ -91,7 +92,7 @@ export function register(program) {
     .action(async (opts) => {
       try {
         const client = await getClient();
-        const response = await fetch(`${client.appsUrl}/api/apps/${opts.app}/experiments/${opts.name}/merge`, {
+        const response = await zeaFetch(`${client.appsUrl}/api/apps/${opts.app}/experiments/${opts.name}/merge`, {
           method: 'POST',
           headers: client.headers
         });
@@ -113,7 +114,7 @@ export function register(program) {
     .action(async (opts) => {
       try {
         const client = await getClient();
-        const response = await fetch(`${client.appsUrl}/api/apps/${opts.app}/experiments/${opts.name}`, {
+        const response = await zeaFetch(`${client.appsUrl}/api/apps/${opts.app}/experiments/${opts.name}`, {
           method: 'DELETE',
           headers: client.headers
         });

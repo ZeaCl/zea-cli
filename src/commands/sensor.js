@@ -1,3 +1,4 @@
+import zeaFetch from '../lib/http.js';
 import { getClient } from '../client.js';
 import { withLearning } from '../utils/learning.js';
 
@@ -47,7 +48,7 @@ export function register(program) {
         if (options.source) params.set('source', options.source);
         if (options.status) params.set('status', options.status);
         if (options.limit) params.set('limit', options.limit);
-        const response = await fetch(`${client.sensorUrl}/api/sensor/events?${params}`, { headers: client.headers });
+        const response = await zeaFetch(`${client.sensorUrl}/api/sensor/events?${params}`, { headers: client.headers });
         if (!response.ok) throw new Error(`HTTP error ${response.status}`);
         const result = await response.json();
         console.log(JSON.stringify(result, null, 2));
@@ -62,7 +63,7 @@ export function register(program) {
     .action(async (id, options) => {
       await withLearning(options.app || 'sensor', 'sensor.get-status', async () => {
         const client = await getClient();
-        const response = await fetch(`${client.sensorUrl}/api/sensor/events/${id}`, { headers: client.headers });
+        const response = await zeaFetch(`${client.sensorUrl}/api/sensor/events/${id}`, { headers: client.headers });
         if (!response.ok) throw new Error(`HTTP error ${response.status}`);
         const result = await response.json();
         console.log(JSON.stringify(result, null, 2));
@@ -77,7 +78,7 @@ export function register(program) {
     .action(async (eventId, options) => {
       await withLearning(options.app || 'sensor', 'sensor.analyze', async () => {
         const client = await getClient();
-        const response = await fetch(`${client.sensorUrl}/api/sensor/analyze/${eventId}`, {
+        const response = await zeaFetch(`${client.sensorUrl}/api/sensor/analyze/${eventId}`, {
           method: 'POST',
           headers: { ...client.headers, 'Content-Type': 'application/json' }
         });
@@ -107,7 +108,7 @@ export function register(program) {
         // Get unprocessed events
         const params = new URLSearchParams({ status: 'ingested', limit: '20' });
         if (opts.source) params.set('source', opts.source);
-        const r = await fetch(`${client.sensorUrl}/api/sensor/events?${params}`, { headers: client.headers });
+        const r = await zeaFetch(`${client.sensorUrl}/api/sensor/events?${params}`, { headers: client.headers });
         if (!r.ok) throw new Error(`HTTP error ${r.status}`);
         const data = await r.json();
         const events = data.data || data.events || [];
@@ -129,7 +130,7 @@ export function register(program) {
             console.log(`🔄 Processing: ${id}... (${source})`);
 
             try {
-              const ar = await fetch(`${client.sensorUrl}/api/sensor/analyze/${event.id}`, {
+              const ar = await zeaFetch(`${client.sensorUrl}/api/sensor/analyze/${event.id}`, {
                 method: 'POST',
                 headers: { ...client.headers, 'Content-Type': 'application/json' }
               });
@@ -169,7 +170,7 @@ export function register(program) {
         console.log(`1/2 Analyzing...`);
         let analysis;
         try {
-          const ar = await fetch(`${client.sensorUrl}/api/sensor/analyze/${eventId}`, {
+          const ar = await zeaFetch(`${client.sensorUrl}/api/sensor/analyze/${eventId}`, {
             method: 'POST',
             headers: { ...client.headers, 'Content-Type': 'application/json' }
           });

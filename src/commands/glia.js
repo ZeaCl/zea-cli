@@ -1,3 +1,4 @@
+import zeaFetch from '../lib/http.js';
 import { getClient } from '../client.js';
 import * as Display from '../utils/display.js';
 import chalk from 'chalk';
@@ -62,7 +63,7 @@ export function register(program) {
       const client = await getClient();
 
       try {
-        const response = await fetch(`${client.gliaUrl}/api/agents`, {
+        const response = await zeaFetch(`${client.gliaUrl}/api/agents`, {
           headers: { 'Authorization': `Bearer ${client.token}` }
         });
 

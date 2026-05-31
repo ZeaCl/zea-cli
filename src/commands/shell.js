@@ -1,3 +1,4 @@
+import zeaFetch from '../lib/http.js';
 import { getClient } from '../client.js';
 import { withLearning } from '../utils/learning.js';
 
@@ -15,7 +16,7 @@ export function register(program) {
         await withLearning(opts.app, 'shell.update-sidebar', async () => {
         const items = JSON.parse(opts.items);
 
-        const mResp = await fetch(`${client.appsUrl}/api/apps/${opts.app}/manifest`, {
+        const mResp = await zeaFetch(`${client.appsUrl}/api/apps/${opts.app}/manifest`, {
           headers: client.headers
         });
         if (!mResp.ok) throw new Error(`Manifest fetch failed: ${mResp.status}`);
@@ -36,7 +37,7 @@ export function register(program) {
           intent_routing: manifest.intent_routing || {}
         };
 
-        const uResp = await fetch(`${client.appsUrl}/api/apps`, {
+        const uResp = await zeaFetch(`${client.appsUrl}/api/apps`, {
           method: 'POST',
           headers: client.headers,
           body: JSON.stringify(payload)
@@ -64,7 +65,7 @@ export function register(program) {
         await withLearning(opts.app, 'shell.update-chat', async () => {
         const value = JSON.parse(opts.value);
 
-        const mResp = await fetch(`${client.appsUrl}/api/apps/${opts.app}/manifest`, {
+        const mResp = await zeaFetch(`${client.appsUrl}/api/apps/${opts.app}/manifest`, {
           headers: client.headers
         });
         if (!mResp.ok) throw new Error(`Manifest fetch failed: ${mResp.status}`);
@@ -91,7 +92,7 @@ export function register(program) {
           intent_routing: manifest.intent_routing || {}
         };
 
-        const uResp = await fetch(`${client.appsUrl}/api/apps`, {
+        const uResp = await zeaFetch(`${client.appsUrl}/api/apps`, {
           method: 'POST',
           headers: client.headers,
           body: JSON.stringify(payload)
@@ -111,7 +112,7 @@ export function register(program) {
     .action(async (opts) => {
       try {
         const client = await getClient();
-        const response = await fetch(`${client.appsUrl}/api/apps/${opts.app}/manifest`, {
+        const response = await zeaFetch(`${client.appsUrl}/api/apps/${opts.app}/manifest`, {
           headers: client.headers
         });
         if (!response.ok) throw new Error(`HTTP error ${response.status}`);

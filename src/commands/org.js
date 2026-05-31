@@ -1,3 +1,4 @@
+import zeaFetch from '../lib/http.js';
 import { getClient, loadConfig, saveConfig } from '../client.js';
 
 export function register(program) {
@@ -8,7 +9,7 @@ export function register(program) {
     .action(async () => {
       try {
         const client = await getClient();
-        const response = await fetch(`${client.apiUrl}/oauth/userinfo`, { headers: client.headers });
+        const response = await zeaFetch(`${client.apiUrl}/oauth/userinfo`, { headers: client.headers });
         
         if (!response.ok) {
           throw new Error(`Failed to fetch user info: status ${response.status}`);
@@ -37,7 +38,7 @@ export function register(program) {
     .action(async (target) => {
       try {
         const client = await getClient();
-        const response = await fetch(`${client.apiUrl}/oauth/userinfo`, { headers: client.headers });
+        const response = await zeaFetch(`${client.apiUrl}/oauth/userinfo`, { headers: client.headers });
         if (!response.ok) throw new Error(`HTTP error ${response.status}`);
 
         const info = await response.json();
@@ -65,7 +66,7 @@ export function register(program) {
     .action(async (options) => {
       try {
         const client = await getClient();
-        const response = await fetch(`${client.apiUrl}/api/organizations`, {
+        const response = await zeaFetch(`${client.apiUrl}/api/organizations`, {
           method: 'POST',
           headers: client.headers,
           body: JSON.stringify({
@@ -100,7 +101,7 @@ export function register(program) {
     .action(async (orgSlug, options) => {
       try {
         const client = await getClient();
-        const userinfoResponse = await fetch(`${client.apiUrl}/oauth/userinfo`, { headers: client.headers });
+        const userinfoResponse = await zeaFetch(`${client.apiUrl}/oauth/userinfo`, { headers: client.headers });
         if (!userinfoResponse.ok) throw new Error(`HTTP error ${userinfoResponse.status}`);
 
         const info = await userinfoResponse.json();
@@ -109,7 +110,7 @@ export function register(program) {
 
         if (!org) throw new Error(`Organization '${orgSlug}' not found in your memberships.`);
 
-        const response = await fetch(`${client.apiUrl}/api/organizations/${org.id}/members`, {
+        const response = await zeaFetch(`${client.apiUrl}/api/organizations/${org.id}/members`, {
           method: 'POST',
           headers: client.headers,
           body: JSON.stringify({
@@ -136,7 +137,7 @@ export function register(program) {
     .action(async (orgSlug, options) => {
       try {
         const client = await getClient();
-        const userinfoResponse = await fetch(`${client.apiUrl}/oauth/userinfo`, { headers: client.headers });
+        const userinfoResponse = await zeaFetch(`${client.apiUrl}/oauth/userinfo`, { headers: client.headers });
         if (!userinfoResponse.ok) throw new Error(`HTTP error ${userinfoResponse.status}`);
 
         const info = await userinfoResponse.json();
@@ -145,7 +146,7 @@ export function register(program) {
 
         if (!org) throw new Error(`Organization '${orgSlug}' not found in your memberships.`);
 
-        const response = await fetch(`${client.apiUrl}/api/organizations/${org.id}/members/${options.userId}`, {
+        const response = await zeaFetch(`${client.apiUrl}/api/organizations/${org.id}/members/${options.userId}`, {
           method: 'DELETE',
           headers: client.headers
         });
@@ -167,7 +168,7 @@ export function register(program) {
     .action(async (orgSlug) => {
       try {
         const client = await getClient();
-        const userinfoResponse = await fetch(`${client.apiUrl}/oauth/userinfo`, { headers: client.headers });
+        const userinfoResponse = await zeaFetch(`${client.apiUrl}/oauth/userinfo`, { headers: client.headers });
         if (!userinfoResponse.ok) throw new Error(`HTTP error ${userinfoResponse.status}`);
 
         const info = await userinfoResponse.json();
@@ -176,7 +177,7 @@ export function register(program) {
 
         if (!org) throw new Error(`Organization '${orgSlug}' not found in your memberships.`);
 
-        const response = await fetch(`${client.apiUrl}/api/organizations/${org.id}`, { headers: client.headers });
+        const response = await zeaFetch(`${client.apiUrl}/api/organizations/${org.id}`, { headers: client.headers });
         if (!response.ok) throw new Error(`HTTP error ${response.status}`);
 
         const result = await response.json();

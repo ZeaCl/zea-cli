@@ -1,3 +1,4 @@
+import zeaFetch from '../lib/http.js';
 import chalk from 'chalk';
 import fs from 'fs/promises';
 import path from 'path';
@@ -33,7 +34,7 @@ export function register(program) {
         }
 
         // Create opencode session
-        const resp = await fetch(`${OPENCODE_URL}/session`, {
+        const resp = await zeaFetch(`${OPENCODE_URL}/session`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ title: `expert-${opts.expert}`, directory: '/workspace' })
@@ -44,7 +45,7 @@ export function register(program) {
         const sid = data.id;
 
         // Set system prompt for the session
-        await fetch(`${OPENCODE_URL}/session/${sid}/message`, {
+        await zeaFetch(`${OPENCODE_URL}/session/${sid}/message`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

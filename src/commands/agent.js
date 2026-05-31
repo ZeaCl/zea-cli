@@ -1,3 +1,4 @@
+import zeaFetch from '../lib/http.js';
 import { getClient } from '../client.js';
 import { withLearning, readJSON } from '../utils/learning.js';
 import * as Display from '../utils/display.js';
@@ -49,7 +50,7 @@ export function register(program) {
   async function fetchStitchScreens(apiKey, projectId) {
     if (!apiKey || !projectId) return [];
     try {
-      const r = await fetch('https://stitch.googleapis.com/mcp', {
+      const r = await zeaFetch('https://stitch.googleapis.com/mcp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': apiKey },
         body: JSON.stringify({ jsonrpc: '2.0', method: 'tools/call', params: { name: 'list_screens', arguments: { projectId } }, id: 1 })
@@ -95,7 +96,7 @@ export function register(program) {
         }
         console.log('');
 
-        const mResp = await fetch(client.appsUrl + '/api/apps/' + opts.app + '/manifest', { headers: client.headers });
+        const mResp = await zeaFetch(client.appsUrl + '/api/apps/' + opts.app + '/manifest', { headers: client.headers });
         if (mResp.ok) {
           const manifest = await mResp.json();
           const states = Object.keys(manifest.states || {});
@@ -153,7 +154,7 @@ export function register(program) {
             const intentName = 'view_' + stateName;
             console.log('📋 ' + s.title + ' → ' + stateName);
 
-            const r1 = await fetch('https://stitch.googleapis.com/mcp', {
+            const r1 = await zeaFetch('https://stitch.googleapis.com/mcp', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': apiKey },
               body: JSON.stringify({ jsonrpc: '2.0', method: 'tools/call', params: { name: 'get_screen', arguments: { projectId: mem.project_id, screenId: s.id } }, id: 2 })
@@ -162,12 +163,12 @@ export function register(program) {
             const match = JSON.stringify(d1).match(/"downloadUrl":"(https:\/\/contribution[^"]+)"/);
             if (!match) { console.log('   ❌ No HTML URL'); failed++; continue; }
 
-            const r2 = await fetch(match[1]);
+            const r2 = await zeaFetch(match[1]);
             const html = await r2.text();
             const mainMatch = html.match(/<main\b[^>]*>([\s\S]*?)<\/main>/);
             const contentHtml = mainMatch ? mainMatch[1].trim() : html;
 
-            const mResp = await fetch(client.appsUrl + '/api/apps/' + opts.app + '/manifest', { headers: client.headers });
+            const mResp = await zeaFetch(client.appsUrl + '/api/apps/' + opts.app + '/manifest', { headers: client.headers });
             if (!mResp.ok) { failed++; continue; }
             const manifest = await mResp.json();
             manifest.states = manifest.states || {};
@@ -185,7 +186,7 @@ export function register(program) {
             };
 
             await withLearning(opts.app, 'agent.improve.import-screen', async () => {
-              const uResp = await fetch(client.appsUrl + '/api/apps', {
+              const uResp = await zeaFetch(client.appsUrl + '/api/apps', {
                 method: 'POST', headers: client.headers, body: JSON.stringify(payload)
               });
               if (uResp.ok) {
@@ -221,7 +222,7 @@ export function register(program) {
         console.log('📊 Current State:');
         let states = 0, intents = 0, primary = '?';
         try {
-          const mResp = await fetch(`${client.appsUrl}/api/apps/${opts.app}/manifest`, { headers: client.headers });
+          const mResp = await zeaFetch(`${client.appsUrl}/api/apps/${opts.app}/manifest`, { headers: client.headers });
           if (mResp.ok) {
             const manifest = await mResp.json();
             states = Object.keys(manifest.states || {}).length;
@@ -323,7 +324,7 @@ export function register(program) {
             console.log(`Step ${p.step}: ${p.lego} ${p.desc}`);
             console.log(`  → Creating experiment: ${opts.name}`);
             await withLearning(opts.app, p.action, async () => {
-              const r = await fetch(`${client.appsUrl}/api/apps/${opts.app}/experiments`, {
+              const r = await zeaFetch(`${client.appsUrl}/api/apps/${opts.app}/experiments`, {
                 method: 'POST', headers: client.headers,
                 body: JSON.stringify({ name: opts.name, app_id: opts.app })
               });
@@ -333,7 +334,7 @@ export function register(program) {
           } else if (p.action === 'experiment.merge') {
             console.log(`Step ${p.step}: ${p.lego} ${p.desc}`);
             await withLearning(opts.app, p.action, async () => {
-              const r = await fetch(`${client.appsUrl}/api/apps/${opts.app}/experiments/${opts.name}/merge`, {
+              const r = await zeaFetch(`${client.appsUrl}/api/apps/${opts.app}/experiments/${opts.name}/merge`, {
                 method: 'POST', headers: client.headers
               });
               if (r.ok) { console.log('  ✅ Merged to production!'); passed++; }

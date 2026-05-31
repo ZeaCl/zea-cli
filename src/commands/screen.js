@@ -1,3 +1,4 @@
+import zeaFetch from '../lib/http.js';
 import { getClient } from '../client.js';
 import chalk from 'chalk';
 
@@ -115,7 +116,7 @@ REGLAS:
 async function callLLM(systemPrompt, userPrompt) {
   if (!DEEPSEEK_KEY) throw new Error('DEEPSEEK_API_KEY not set');
 
-  const resp = await fetch(DEEPSEEK_API, {
+  const resp = await zeaFetch(DEEPSEEK_API, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -167,7 +168,7 @@ export function register(program) {
     .action(async (opts) => {
       try {
         const client = await getClient();
-        const resp = await fetch(`${client.appsUrl}/api/apps/${opts.app}/manifest`, { headers: client.headers });
+        const resp = await zeaFetch(`${client.appsUrl}/api/apps/${opts.app}/manifest`, { headers: client.headers });
         if (!resp.ok) throw new Error(`API error: ${resp.status}`);
         const manifest = await resp.json();
         const state = (manifest.states || {})[opts.screen];
@@ -234,7 +235,7 @@ export function register(program) {
       try {
         const client = await getClient();
         console.log(`\n[1/5] Fetching manifest...`);
-        const resp = await fetch(`${client.appsUrl}/api/apps/${opts.app}/manifest`, { headers: client.headers });
+        const resp = await zeaFetch(`${client.appsUrl}/api/apps/${opts.app}/manifest`, { headers: client.headers });
         if (!resp.ok) throw new Error(`API error: ${resp.status}`);
         const manifest = await resp.json();
         const state = (manifest.states || {})[opts.screen];
@@ -384,7 +385,7 @@ Devolvé el HTML COMPLETO con los bindings inyectados. NO resumas, NO truncues.`
           shell: manifest.shell || {}, design_system: manifest.design_system || {}
         };
 
-        const uResp = await fetch(`${client.appsUrl}/api/apps`, {
+        const uResp = await zeaFetch(`${client.appsUrl}/api/apps`, {
           method: 'POST', headers: client.headers, body: JSON.stringify(payload)
         });
         if (!uResp.ok) throw new Error(`Update failed: ${uResp.status}`);
@@ -408,7 +409,7 @@ Devolvé el HTML COMPLETO con los bindings inyectados. NO resumas, NO truncues.`
     .action(async (opts) => {
       try {
         const client = await getClient();
-        const resp = await fetch(`${client.appsUrl}/api/apps/${opts.app}/manifest`, { headers: client.headers });
+        const resp = await zeaFetch(`${client.appsUrl}/api/apps/${opts.app}/manifest`, { headers: client.headers });
         if (!resp.ok) throw new Error(`API error: ${resp.status}`);
         const manifest = await resp.json();
         const states = manifest.states || {};

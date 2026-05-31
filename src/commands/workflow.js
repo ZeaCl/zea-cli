@@ -1,3 +1,4 @@
+import zeaFetch from '../lib/http.js';
 import { getClient } from '../client.js';
 
 export function register(program) {
@@ -8,7 +9,7 @@ export function register(program) {
     .action(async () => {
       try {
         const client = await getClient();
-        const response = await fetch(`${client.cerebelumUrl}/api/v1/workflows`, { headers: client.headers });
+        const response = await zeaFetch(`${client.cerebelumUrl}/api/v1/workflows`, { headers: client.headers });
         if (!response.ok) throw new Error(`HTTP error ${response.status}`);
 
         const result = await response.json();
@@ -49,7 +50,7 @@ export function register(program) {
           parsedInputs = {};
         }
 
-        const response = await fetch(`${client.cerebelumUrl}/api/v1/executions`, {
+        const response = await zeaFetch(`${client.cerebelumUrl}/api/v1/executions`, {
           method: 'POST',
           headers: client.headers,
           body: JSON.stringify({
@@ -77,7 +78,7 @@ export function register(program) {
     .action(async (executionId) => {
       try {
         const client = await getClient();
-        const response = await fetch(`${client.cerebelumUrl}/api/v1/executions/${executionId}`, { headers: client.headers });
+        const response = await zeaFetch(`${client.cerebelumUrl}/api/v1/executions/${executionId}`, { headers: client.headers });
         if (!response.ok) throw new Error(`HTTP error ${response.status}`);
 
         const result = await response.json();
@@ -102,7 +103,7 @@ export function register(program) {
     .action(async (executionId) => {
       try {
         const client = await getClient();
-        const response = await fetch(`${client.cerebelumUrl}/api/v1/executions/${executionId}/stop`, {
+        const response = await zeaFetch(`${client.cerebelumUrl}/api/v1/executions/${executionId}/stop`, {
           method: 'POST',
           headers: client.headers
         });
@@ -123,7 +124,7 @@ export function register(program) {
     .action(async (executionId) => {
       try {
         const client = await getClient();
-        const response = await fetch(`${client.cerebelumUrl}/api/v1/executions/${executionId}/resume`, {
+        const response = await zeaFetch(`${client.cerebelumUrl}/api/v1/executions/${executionId}/resume`, {
           method: 'POST',
           headers: client.headers
         });

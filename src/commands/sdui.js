@@ -1,3 +1,4 @@
+import zeaFetch from '../lib/http.js';
 import { getClient } from '../client.js';
 
 export function register(program) {
@@ -13,7 +14,7 @@ export function register(program) {
         const body = { app_id: appId, token: client.token };
         if (orgId) body.org_id = orgId;
 
-        const response = await fetch(`${client.sduiUrl}/api/sessions`, {
+        const response = await zeaFetch(`${client.sduiUrl}/api/sessions`, {
           method: 'POST',
           headers: client.headers,
           body: JSON.stringify(body)
@@ -44,7 +45,7 @@ export function register(program) {
         let payload = {};
         try { payload = JSON.parse(payloadStr); } catch {}
         
-        const response = await fetch(`${client.sduiUrl}/api/sessions/${sessionId}/dispatch`, {
+        const response = await zeaFetch(`${client.sduiUrl}/api/sessions/${sessionId}/dispatch`, {
           method: 'POST',
           headers: client.headers,
           body: JSON.stringify({ action, payload })
@@ -71,7 +72,7 @@ export function register(program) {
     .action(async (appId) => {
       try {
         const client = await getClient();
-        const response = await fetch(`${client.appsUrl}/api/apps/${appId}/manifest`, {
+        const response = await zeaFetch(`${client.appsUrl}/api/apps/${appId}/manifest`, {
           headers: client.headers
         });
         if (!response.ok) throw new Error(`HTTP error ${response.status}`);
@@ -117,7 +118,7 @@ export function register(program) {
     .action(async (appId) => {
       try {
         const client = await getClient();
-        const response = await fetch(`${client.appsUrl}/api/apps/${appId}/manifest`, {
+        const response = await zeaFetch(`${client.appsUrl}/api/apps/${appId}/manifest`, {
           headers: client.headers
         });
         if (!response.ok) throw new Error(`HTTP error ${response.status}`);
@@ -144,7 +145,7 @@ export function register(program) {
     .action(async (appId, stateName, opts) => {
       try {
         const client = await getClient();
-        const response = await fetch(`${client.appsUrl}/api/apps/${appId}/manifest`, {
+        const response = await zeaFetch(`${client.appsUrl}/api/apps/${appId}/manifest`, {
           headers: client.headers
         });
         if (!response.ok) throw new Error(`HTTP error ${response.status}`);

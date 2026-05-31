@@ -1,3 +1,4 @@
+import zeaFetch from '../lib/http.js';
 import { getClient, loadConfig } from '../client.js';
 import crypto from 'crypto';
 
@@ -33,14 +34,14 @@ async function check_api() {
 
   // Venture API
   try {
-    const r = await fetch('http://venture-api.zea.localhost/health', { signal: AbortSignal.timeout(5000) });
+    const r = await zeaFetch('http://venture-api.zea.localhost/health', { signal: AbortSignal.timeout(5000) });
     if (r.ok) { passed++; ok('Venture API health', Date.now() - t0); }
     else fail(`Venture API health: ${r.status}`);
   } catch (e) { fail(`Venture API: ${e.message}`); }
 
   // Thalamus JWKS
   try {
-    const r = await fetch('http://auth.zea.localhost/.well-known/jwks.json', { signal: AbortSignal.timeout(5000) });
+    const r = await zeaFetch('http://auth.zea.localhost/.well-known/jwks.json', { signal: AbortSignal.timeout(5000) });
     if (r.ok) { passed++; ok('Thalamus JWKS', Date.now() - t0); }
     else fail(`Thalamus JWKS: ${r.status}`);
   } catch (e) { fail(`Thalamus JWKS: ${e.message}`); }
@@ -49,7 +50,7 @@ async function check_api() {
   const stitchKey = process.env.STITCH_KEY;
   if (stitchKey) {
     try {
-      const r = await fetch('https://stitch.googleapis.com/mcp', {
+      const r = await zeaFetch('https://stitch.googleapis.com/mcp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': stitchKey },
         body: JSON.stringify({ jsonrpc: '2.0', method: 'tools/list', params: {}, id: 1 }),
@@ -90,7 +91,7 @@ async function check_auth() {
 
     // Test Venture API
     try {
-      const r = await fetch('http://venture-api.zea.localhost/gp/dashboard', {
+      const r = await zeaFetch('http://venture-api.zea.localhost/gp/dashboard', {
         headers: { 'Authorization': `Bearer ${token}` },
         signal: AbortSignal.timeout(5000)
       });
@@ -119,7 +120,7 @@ async function check_venture() {
 
   for (const [path, label] of endpoints) {
     try {
-      const r = await fetch(`http://venture-api.zea.localhost${path}`, {
+      const r = await zeaFetch(`http://venture-api.zea.localhost${path}`, {
         headers: { 'Authorization': `Bearer ${client.token}` },
         signal: AbortSignal.timeout(5000)
       });
@@ -148,7 +149,7 @@ async function check_stitch() {
   let passed = 0;
 
   try {
-    const r = await fetch('https://stitch.googleapis.com/mcp', {
+    const r = await zeaFetch('https://stitch.googleapis.com/mcp', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': stitchKey },
       body: JSON.stringify({ jsonrpc: '2.0', method: 'tools/call', params: { name: 'list_screens', arguments: { projectId: process.env.STITCH_PROJECT || '' } }, id: 1 }),
@@ -174,7 +175,7 @@ async function check_glia() {
 
   // Glia health endpoint (nueva Glia en port 4002)
   try {
-    const r = await fetch('http://localhost:4002/api/health', { signal: AbortSignal.timeout(5000) });
+    const r = await zeaFetch('http://localhost:4002/api/health', { signal: AbortSignal.timeout(5000) });
     if (r.ok) {
       const data = await r.json();
       ok(`Glia health: ${data.status} (v${data.version})`);
@@ -186,7 +187,7 @@ async function check_glia() {
 
   // Agents list
   try {
-    const r = await fetch('http://localhost:4002/api/agents', { signal: AbortSignal.timeout(5000) });
+    const r = await zeaFetch('http://localhost:4002/api/agents', { signal: AbortSignal.timeout(5000) });
     if (r.ok) {
       const data = await r.json();
       ok(`Agents: ${data.count || 0} running`);
@@ -197,7 +198,7 @@ async function check_glia() {
   // DeepSeek model check
   try {
     const dsKey = process.env.DEEPSEEK_API_KEY || process.env.DEEPSEEK_API_KEYS?.split(',')[0] || '';
-    const r = await fetch('https://api.deepseek.com/chat/completions', {
+    const r = await zeaFetch('https://api.deepseek.com/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${dsKey}`,
@@ -234,7 +235,7 @@ async function check_tools() {
   try {
     const token = process.env.ZEA_TOKEN;
     if (token) {
-      const r = await fetch('http://venture-api.zea.localhost/gp/capital-calls', {
+      const r = await zeaFetch('http://venture-api.zea.localhost/gp/capital-calls', {
         headers: { 'Authorization': `Bearer ${token}` },
         signal: AbortSignal.timeout(5000)
       });

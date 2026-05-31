@@ -1,3 +1,4 @@
+import zeaFetch from '../lib/http.js';
 import chalk from 'chalk';
 import { execSync } from 'child_process';
 import { WebSocket } from 'ws';
@@ -54,7 +55,7 @@ async function askOrchestrator(systemPrompt, message, sessionName) {
     const sid = await ensureOrchSession(sessionName);
     if (sid) {
       try {
-        const resp = await fetch(`${OPENCODE}/session/${sid}/message`, {
+        const resp = await zeaFetch(`${OPENCODE}/session/${sid}/message`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -75,7 +76,7 @@ async function askOrchestrator(systemPrompt, message, sessionName) {
   }
 
   // Fallback: call DeepSeek directly
-  const resp = await fetch(DEEPSEEK_API, {
+  const resp = await zeaFetch(DEEPSEEK_API, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${DEEPSEEK_KEY}` },
     body: JSON.stringify({
@@ -106,7 +107,7 @@ async function ensureOrchSession(sessionName) {
   if (orchidSessions[sessionName]) return orchidSessions[sessionName];
   
   try {
-    const resp = await fetch(`${OPENCODE}/session`, {
+    const resp = await zeaFetch(`${OPENCODE}/session`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ title: `orch-${sessionName.slice(0, 30)}`, directory: '/workspace' })
@@ -148,7 +149,7 @@ async function executePlan(plan) {
 
     try {
       // Execute via opencode HTTP API (avoids shell escaping issues)
-      const sidResp = await fetch(`${OPENCODE}/session`, {
+      const sidResp = await zeaFetch(`${OPENCODE}/session`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: `step-${i+1}-${expert}`, directory: '/workspace' })
@@ -156,7 +157,7 @@ async function executePlan(plan) {
       const sidData = await sidResp.json();
       const sid = sidData.id;
 
-      const msgResp = await fetch(`${OPENCODE}/session/${sid}/message`, {
+      const msgResp = await zeaFetch(`${OPENCODE}/session/${sid}/message`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -184,14 +185,14 @@ async function executePlan(plan) {
         try {
           console.log(chalk.yellow(`  → Delegando a infra-expert...`));
           wsEmit('delegate', { from: expert, to: 'infra', reason: e.message?.slice(0, 100) });
-          const infraSidResp = await fetch(`${OPENCODE}/session`, {
+          const infraSidResp = await zeaFetch(`${OPENCODE}/session`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ title: `infra-fix-${i+1}`, directory: '/workspace' })
           });
           const infraSidData = await infraSidResp.json();
           const infraSid = infraSidData.id;
 
-          await fetch(`${OPENCODE}/session/${infraSid}/message`, {
+          await zeaFetch(`${OPENCODE}/session/${infraSid}/message`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               model: { providerID: 'deepseek', modelID: 'deepseek-v4-pro' },
@@ -201,14 +202,14 @@ async function executePlan(plan) {
           });
 
           // Retry original step
-          const retrySidResp = await fetch(`${OPENCODE}/session`, {
+          const retrySidResp = await zeaFetch(`${OPENCODE}/session`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ title: `retry-${i+1}-${expert}`, directory: '/workspace' })
           });
           const retrySidData = await retrySidResp.json();
           const retrySid = retrySidData.id;
 
-          const retryMsgResp = await fetch(`${OPENCODE}/session/${retrySid}/message`, {
+          const retryMsgResp = await zeaFetch(`${OPENCODE}/session/${retrySid}/message`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               model: { providerID: 'deepseek', modelID: 'deepseek-v4-pro' },

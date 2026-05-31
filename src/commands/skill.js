@@ -1,3 +1,4 @@
+import zeaFetch from '../lib/http.js';
 import { getClient } from '../client.js';
 
 export function register(program) {
@@ -8,7 +9,7 @@ export function register(program) {
     .action(async () => {
       try {
         const client = await getClient();
-        const response = await fetch(`${client.gliaUrl}/api/skills`, { headers: client.headers });
+        const response = await zeaFetch(`${client.gliaUrl}/api/skills`, { headers: client.headers });
         if (!response.ok) {
           const errData = await response.json();
           throw new Error(errData.error || `HTTP error ${response.status}`);
@@ -28,7 +29,7 @@ export function register(program) {
     .action(async () => {
       try {
         const client = await getClient();
-        const response = await fetch(`${client.gliaUrl}/api/skills/reload`, {
+        const response = await zeaFetch(`${client.gliaUrl}/api/skills/reload`, {
           method: 'POST',
           headers: client.headers
         });

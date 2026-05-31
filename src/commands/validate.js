@@ -1,3 +1,4 @@
+import zeaFetch from '../lib/http.js';
 import { getClient } from '../client.js';
 import { execSync } from 'child_process';
 import chalk from 'chalk';
@@ -10,7 +11,7 @@ const DEEPSEEK_KEY = process.env.DEEPSEEK_API_KEY || process.env.DEEPSEEK_API_KE
 const VISUAL_HOST = process.env.VISUAL_HOST || 'http://localhost:4090';
 
 async function askAI(prompt, context) {
-  const resp = await fetch(DEEPSEEK_API, {
+  const resp = await zeaFetch(DEEPSEEK_API, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${DEEPSEEK_KEY}` },
     body: JSON.stringify({
@@ -67,7 +68,7 @@ export function register(program) {
     try {
       // 1. Get SDUI HTML
       const client = await getClient();
-      const resp = await fetch(`${client.appsUrl}/api/apps/${opts.app}/manifest`, { headers: client.headers });
+      const resp = await zeaFetch(`${client.appsUrl}/api/apps/${opts.app}/manifest`, { headers: client.headers });
       if (!resp.ok) throw new Error(`API error: ${resp.status}`);
       const manifest = await resp.json();
       const state = (manifest.states || {})[opts.screen];
@@ -82,7 +83,7 @@ export function register(program) {
         const stitchData = JSON.parse(await fs.readFile(stitchJsonPath, 'utf8'));
         const mapping = stitchData.screen_mappings?.[opts.screen];
         if (mapping?.stitch_id && process.env.STITCH_KEY) {
-          const stitchResp = await fetch('https://stitch.googleapis.com/mcp', {
+          const stitchResp = await zeaFetch('https://stitch.googleapis.com/mcp', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': process.env.STITCH_KEY },
             body: JSON.stringify({ jsonrpc: '2.0', method: 'tools/call', params: { name: 'get_screen', arguments: { projectId: stitchData.project_id, screenId: mapping.stitch_id } }, id: 1 })
@@ -90,7 +91,7 @@ export function register(program) {
           const stitchData2 = await stitchResp.json();
           const match = JSON.stringify(stitchData2).match(/"downloadUrl":"(https:\/\/contribution[^"]+)"/);
           if (match) {
-            const htmlResp = await fetch(match[1]);
+            const htmlResp = await zeaFetch(match[1]);
             stitchHtml = await htmlResp.text();
             const mainMatch = stitchHtml.match(/<main[^>]*>([\s\S]*?)<\/main>/);
             if (mainMatch) stitchHtml = mainMatch[1].trim();
@@ -153,14 +154,14 @@ export function register(program) {
       if (opts.browser) {
         const sduiUrl = `http://sudlich.zea.localhost/app?app_id=${opts.app}`;
         try {
-          const openResp = await fetch(`${VISUAL_HOST}/open`, {
+          const openResp = await zeaFetch(`${VISUAL_HOST}/open`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ url: sduiUrl })
           });
           const openData = await openResp.json();
 
           if (openData.ok) {
-            const shotResp = await fetch(`${VISUAL_HOST}/screenshot`, {
+            const shotResp = await zeaFetch(`${VISUAL_HOST}/screenshot`, {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ session_id: openData.session_id, filename: `validate-${opts.screen}-${Date.now()}.png` })
             });
@@ -180,7 +181,7 @@ export function register(program) {
             }
 
             // Close browser session
-            await fetch(`${VISUAL_HOST}/close`, {
+            await zeaFetch(`${VISUAL_HOST}/close`, {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ session_id: openData.session_id })
             });

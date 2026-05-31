@@ -1,3 +1,4 @@
+import zeaFetch from '../lib/http.js';
 import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
@@ -121,7 +122,7 @@ export function register(program) {
 
         // Check that bot HTTP endpoint is alive
         try {
-          const healthResp = await fetch('http://localhost:4099/health', { signal: AbortSignal.timeout(5000) });
+          const healthResp = await zeaFetch('http://localhost:4099/health', { signal: AbortSignal.timeout(5000) });
           if (!healthResp.ok) throw new Error('unhealthy');
         } catch {
           console.error(chalk.red('❌ Bot HTTP endpoint no responde en http://localhost:4099/health'));

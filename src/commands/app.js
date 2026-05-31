@@ -1,3 +1,4 @@
+import zeaFetch from '../lib/http.js';
 import { getClient } from '../client.js';
 
 export function register(program) {
@@ -11,7 +12,7 @@ export function register(program) {
         const url = client.activeOrgId
           ? `${client.appsUrl}/api/apps?org_id=${client.activeOrgId}`
           : `${client.appsUrl}/api/apps`;
-        const response = await fetch(url, { headers: client.headers });
+        const response = await zeaFetch(url, { headers: client.headers });
         if (!response.ok) {
           const errData = await response.json();
           throw new Error(errData.error || `HTTP error ${response.status}`);
@@ -31,7 +32,7 @@ export function register(program) {
     .action(async (appId) => {
       try {
         const client = await getClient();
-        const response = await fetch(`${client.appsUrl}/api/apps/${appId}/manifest`, { headers: client.headers });
+        const response = await zeaFetch(`${client.appsUrl}/api/apps/${appId}/manifest`, { headers: client.headers });
         if (!response.ok) {
           const errData = await response.json();
           throw new Error(errData.error || `HTTP error ${response.status}`);
@@ -74,7 +75,7 @@ export function register(program) {
           intent_routing: manifest.intent_routing || {}
         };
 
-        const response = await fetch(`${client.appsUrl}/api/apps`, {
+        const response = await zeaFetch(`${client.appsUrl}/api/apps`, {
           method: 'POST',
           headers: client.headers,
           body: JSON.stringify(payload)

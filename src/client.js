@@ -5,6 +5,7 @@ import os from 'os';
 import http from 'http';
 import crypto from 'crypto';
 import open from 'open';
+import { zeaFetch } from './lib/http.js';
 
 const originalLookup = dns.lookup;
 dns.lookup = function(hostname, options, callback) {
@@ -94,7 +95,7 @@ export async function handleDirectLogin(options) {
   const password = options.password;
   
   try {
-    const response = await fetch(`${apiUrl}/api/public/login`, {
+    const response = await zeaFetch(`${apiUrl}/api/public/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password })
@@ -111,7 +112,7 @@ export async function handleDirectLogin(options) {
     config.refreshToken = data.refresh_token;
     config.apiUrl = apiUrl;
     
-    const userinfoResponse = await fetch(`${apiUrl}/oauth/userinfo`, {
+    const userinfoResponse = await zeaFetch(`${apiUrl}/oauth/userinfo`, {
       headers: { 'Authorization': `Bearer ${data.access_token}` }
     });
     
@@ -168,7 +169,7 @@ export async function handleLogin(options) {
           code_verifier: codeVerifier
         });
 
-        const tokenResponse = await fetch(tokenUrl, {
+        const tokenResponse = await zeaFetch(tokenUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded'
@@ -188,7 +189,7 @@ export async function handleLogin(options) {
         config.refreshToken = tokenData.refresh_token;
         config.apiUrl = apiUrl;
         
-        const userinfoResponse = await fetch(`${apiUrl}/oauth/userinfo`, {
+        const userinfoResponse = await zeaFetch(`${apiUrl}/oauth/userinfo`, {
           headers: { 'Authorization': `Bearer ${tokenData.access_token}` }
         });
 

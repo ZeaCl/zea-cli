@@ -1,3 +1,4 @@
+import zeaFetch from '../lib/http.js';
 import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
@@ -21,7 +22,7 @@ async function saveLearnings(learnings) {
 }
 
 async function askAI(prompt) {
-  const resp = await fetch(DEEPSEEK_API, {
+  const resp = await zeaFetch(DEEPSEEK_API, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${DEEPSEEK_KEY}` },
     body: JSON.stringify({

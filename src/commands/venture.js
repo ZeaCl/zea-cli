@@ -1,4 +1,5 @@
 import { getClient } from '../client.js';
+import zeaFetch from '../lib/http.js';
 import fs from 'fs/promises';
 import path from 'path';
 import { execSync } from 'child_process';
@@ -16,7 +17,7 @@ export function register(program) {
         const orgId = client.activeOrgId;
         const headers = { ...client.headers };
         if (orgId) headers['X-Zea-Org-Id'] = orgId;
-        const response = await fetch(`${client.ventureUrl}/gp/funds`, { headers });
+        const response = await zeaFetch(`${client.ventureUrl}/gp/funds`, { headers });
         if (!response.ok) {
           const errData = await response.json();
           throw new Error(errData.error || errData.detail || `HTTP error ${response.status}`);
@@ -57,7 +58,7 @@ export function register(program) {
           carried_interest: options.carry ? JSON.parse(options.carry) : undefined
         };
 
-        const response = await fetch(`${client.cerebelumUrl}/api/v1/executions`, {
+        const response = await zeaFetch(`${client.cerebelumUrl}/api/v1/executions`, {
           method: 'POST',
           headers: client.headers,
           body: JSON.stringify({
@@ -79,7 +80,7 @@ export function register(program) {
         let attempts = 0;
         while (status === 'running' && attempts < 10) {
           await new Promise(r => setTimeout(r, 1000));
-          const statusResp = await fetch(`${client.cerebelumUrl}/api/v1/executions/${execId}`, { headers: client.headers });
+          const statusResp = await zeaFetch(`${client.cerebelumUrl}/api/v1/executions/${execId}`, { headers: client.headers });
           if (statusResp.ok) {
             const statusResult = await statusResp.json();
             status = statusResult.data.status;
@@ -112,7 +113,7 @@ export function register(program) {
         const orgId = client.activeOrgId;
         const headers = { ...client.headers };
         if (orgId) headers['X-Zea-Org-Id'] = orgId;
-        const response = await fetch(`${client.ventureUrl}/gp/funds/${fundId}`, { headers });
+        const response = await zeaFetch(`${client.ventureUrl}/gp/funds/${fundId}`, { headers });
         if (!response.ok) {
           const errData = await response.json();
           throw new Error(errData.error || errData.detail || `HTTP error ${response.status}`);
@@ -141,7 +142,7 @@ export function register(program) {
         const orgId = client.activeOrgId;
         const headers = { ...client.headers, 'Content-Type': 'application/json' };
         if (orgId) headers['X-Zea-Org-Id'] = orgId;
-        const response = await fetch(`${client.ventureUrl}/gp/funds/${fundId}/transition`, {
+        const response = await zeaFetch(`${client.ventureUrl}/gp/funds/${fundId}/transition`, {
           method: 'POST',
           headers,
           body: JSON.stringify({ status: options.status })
@@ -174,7 +175,7 @@ export function register(program) {
         }
         const headers = { ...client.headers, 'Content-Type': 'application/json' };
         if (orgId) headers['X-Zea-Org-Id'] = orgId;
-        const response = await fetch(`${client.ventureUrl}/gp/funds/${fundId}`, {
+        const response = await zeaFetch(`${client.ventureUrl}/gp/funds/${fundId}`, {
           method: 'PUT',
           headers,
           body: JSON.stringify(body)
@@ -200,7 +201,7 @@ export function register(program) {
         const orgId = client.activeOrgId;
         const headers = { ...client.headers };
         if (orgId) headers['X-Zea-Org-Id'] = orgId;
-        const response = await fetch(`${client.ventureUrl}/gp/dashboard`, { headers });
+        const response = await zeaFetch(`${client.ventureUrl}/gp/dashboard`, { headers });
         if (!response.ok) {
           const errData = await response.json();
           throw new Error(errData.error || errData.detail || `HTTP error ${response.status}`);
@@ -222,7 +223,7 @@ export function register(program) {
         const orgId = client.activeOrgId;
         const headers = { ...client.headers };
         if (orgId) headers['X-Zea-Org-Id'] = orgId;
-        const response = await fetch(`${client.ventureUrl}/gp/capital-calls`, { headers });
+        const response = await zeaFetch(`${client.ventureUrl}/gp/capital-calls`, { headers });
         if (!response.ok) {
           const errData = await response.json();
           throw new Error(errData.error || errData.detail || `HTTP error ${response.status}`);
@@ -260,7 +261,7 @@ export function register(program) {
             org_id: orgId
           };
 
-          const response = await fetch(`${client.cerebelumUrl}/api/v1/executions`, {
+          const response = await zeaFetch(`${client.cerebelumUrl}/api/v1/executions`, {
             method: 'POST',
             headers: client.headers,
             body: JSON.stringify({
@@ -282,7 +283,7 @@ export function register(program) {
         } else {
           const headers = { ...client.headers, 'Content-Type': 'application/json' };
         if (orgId) headers['X-Zea-Org-Id'] = orgId;
-          const response = await fetch(`${client.ventureUrl}/gp/capital-calls`, {
+          const response = await zeaFetch(`${client.ventureUrl}/gp/capital-calls`, {
             method: 'POST',
             headers,
             body: JSON.stringify({
@@ -316,7 +317,7 @@ export function register(program) {
         const orgId = client.activeOrgId;
         const headers = { ...client.headers };
         if (orgId) headers['X-Zea-Org-Id'] = orgId;
-        const response = await fetch(`${client.ventureUrl}/gp/capital-calls/${callId}`, { headers });
+        const response = await zeaFetch(`${client.ventureUrl}/gp/capital-calls/${callId}`, { headers });
         if (!response.ok) {
           const errData = await response.json();
           throw new Error(errData.error || errData.detail || `HTTP error ${response.status}`);
@@ -341,7 +342,7 @@ export function register(program) {
         const orgId = client.activeOrgId;
         const headers = { ...client.headers };
         if (orgId) headers['X-Zea-Org-Id'] = orgId;
-        const response = await fetch(`${client.ventureUrl}/gp/capital-calls/${callId}/send`, {
+        const response = await zeaFetch(`${client.ventureUrl}/gp/capital-calls/${callId}/send`, {
           method: 'POST',
           headers
         });
@@ -365,7 +366,7 @@ export function register(program) {
         const orgId = client.activeOrgId;
         const headers = { ...client.headers };
         if (orgId) headers['X-Zea-Org-Id'] = orgId;
-        const response = await fetch(`${client.ventureUrl}/gp/investors`, { headers });
+        const response = await zeaFetch(`${client.ventureUrl}/gp/investors`, { headers });
         if (!response.ok) {
           const errData = await response.json();
           throw new Error(errData.error || errData.detail || `HTTP error ${response.status}`);
@@ -391,7 +392,7 @@ export function register(program) {
         const orgId = client.activeOrgId;
         const headers = { ...client.headers, 'Content-Type': 'application/json' };
         if (orgId) headers['X-Zea-Org-Id'] = orgId;
-        const response = await fetch(`${client.ventureUrl}/gp/investors`, {
+        const response = await zeaFetch(`${client.ventureUrl}/gp/investors`, {
           method: 'POST',
           headers,
           body: JSON.stringify({ name: options.name, email: options.email, investor_type: options.type })
@@ -418,7 +419,7 @@ export function register(program) {
         const orgId = client.activeOrgId;
         const headers = { ...client.headers, 'Content-Type': 'application/json' };
         if (orgId) headers['X-Zea-Org-Id'] = orgId;
-        const response = await fetch(`${client.ventureUrl}/gp/investors/${options.investor}/commitments`, {
+        const response = await zeaFetch(`${client.ventureUrl}/gp/investors/${options.investor}/commitments`, {
           method: 'POST',
           headers,
           body: JSON.stringify({ fund_id: options.fund, amount: parseInt(options.amount) })
@@ -577,11 +578,11 @@ print(json.dumps(result))
             try {
               if (entity === 'funds') {
                 const body = { name: row.name || row.Name, type: row.type || 'VENTURE_CAPITAL', total_size: parseInt(row.total_size || 0) * 100, currency: row.currency || 'USD', status: row.status || 'DRAFT' };
-                const r = await fetch(`${client.ventureUrl}${entityMap[entity]}`, { method: 'POST', headers, body: JSON.stringify(body) });
+                const r = await zeaFetch(`${client.ventureUrl}${entityMap[entity]}`, { method: 'POST', headers, body: JSON.stringify(body) });
                 if (r.ok) { created[entity] = (created[entity] || 0) + 1; }
               } else if (entity === 'investors') {
                 const body = { name: row.name || row.Name, email: row.email || row.Email, investor_type: row.investor_type || row.investorType || 'INDIVIDUAL', is_qualified_investor: row.is_qualified === 'true' || row.is_qualified === true };
-                const r = await fetch(`${client.ventureUrl}${entityMap[entity]}`, { method: 'POST', headers, body: JSON.stringify(body) });
+                const r = await zeaFetch(`${client.ventureUrl}${entityMap[entity]}`, { method: 'POST', headers, body: JSON.stringify(body) });
                 if (r.ok) { created[entity] = (created[entity] || 0) + 1; }
               }
             } catch (e) { /* skip row errors */ }

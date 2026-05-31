@@ -1,3 +1,4 @@
+import zeaFetch from '../lib/http.js';
 import { getClient } from '../client.js';
 
 export function register(program) {
@@ -8,7 +9,7 @@ export function register(program) {
     .action(async () => {
       try {
         const client = await getClient();
-        const response = await fetch(`${client.apiUrl}/api/domains`, { headers: client.headers });
+        const response = await zeaFetch(`${client.apiUrl}/api/domains`, { headers: client.headers });
         if (!response.ok) throw new Error(`HTTP error ${response.status}`);
         const result = await response.json();
         const domains = result.data || [];
@@ -34,7 +35,7 @@ export function register(program) {
       try {
         const client = await getClient();
         const scopes = JSON.parse(options.scopes);
-        const response = await fetch(`${client.apiUrl}/api/domains/register`, {
+        const response = await zeaFetch(`${client.apiUrl}/api/domains/register`, {
           method: 'POST',
           headers: client.headers,
           body: JSON.stringify({ domain: domainName, scopes: scopes })
@@ -67,7 +68,7 @@ export function register(program) {
           scopes: scopes
         };
         if (options.entityId) body.entity_id = options.entityId;
-        const response = await fetch(`${client.apiUrl}/api/domains/roles/grant`, {
+        const response = await zeaFetch(`${client.apiUrl}/api/domains/roles/grant`, {
           method: 'POST',
           headers: client.headers,
           body: JSON.stringify(body)
@@ -89,7 +90,7 @@ export function register(program) {
     .action(async (userId, domain, role, options) => {
       try {
         const client = await getClient();
-        const response = await fetch(`${client.apiUrl}/api/domains/roles/revoke`, {
+        const response = await zeaFetch(`${client.apiUrl}/api/domains/roles/revoke`, {
           method: 'DELETE',
           headers: client.headers,
           body: JSON.stringify({

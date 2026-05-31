@@ -1,3 +1,4 @@
+import zeaFetch from '../lib/http.js';
 import { getClient, loadConfig } from '../client.js';
 import fs from 'fs/promises';
 import path from 'path';
@@ -40,7 +41,7 @@ export function register(program) {
           process.exit(1);
         }
 
-        const response = await fetch('https://stitch.googleapis.com/mcp', {
+        const response = await zeaFetch('https://stitch.googleapis.com/mcp', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': apiKey },
           body: JSON.stringify({ jsonrpc: '2.0', method: 'tools/call', params: { name: 'list_screens', arguments: { projectId } }, id: 1 })
@@ -89,7 +90,7 @@ export function register(program) {
 
         // 1. Get screen metadata
         console.log(`1/5 Fetching screen metadata...`);
-        const r1 = await fetch('https://stitch.googleapis.com/mcp', {
+        const r1 = await zeaFetch('https://stitch.googleapis.com/mcp', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': apiKey },
           body: JSON.stringify({ jsonrpc: '2.0', method: 'tools/call', params: { name: 'get_screen', arguments: { projectId, screenId: opts.screenId } }, id: 2 })
@@ -104,7 +105,7 @@ export function register(program) {
         }
         const htmlUrl = match[1];
         console.log(`2/5 Downloading HTML...`);
-        const r2 = await fetch(htmlUrl);
+        const r2 = await zeaFetch(htmlUrl);
         const html = await r2.text();
 
         // 2. Extract <main> content
@@ -114,7 +115,7 @@ export function register(program) {
 
         // 3. Update manifest
         console.log(`4/5 Updating manifest...`);
-        const mResp = await fetch(`${client.appsUrl}/api/apps/${opts.app}/manifest`, {
+        const mResp = await zeaFetch(`${client.appsUrl}/api/apps/${opts.app}/manifest`, {
           headers: client.headers
         });
         if (!mResp.ok) throw new Error(`Manifest fetch failed: ${mResp.status}`);
@@ -143,7 +144,7 @@ export function register(program) {
           intent_routing: manifest.intent_routing
         };
 
-        const uResp = await fetch(`${client.appsUrl}/api/apps`, {
+        const uResp = await zeaFetch(`${client.appsUrl}/api/apps`, {
           method: 'POST',
           headers: client.headers,
           body: JSON.stringify(payload)
@@ -181,7 +182,7 @@ export function register(program) {
     .action(async (opts) => {
       try {
         const client = await getClient();
-        const resp = await fetch(`${client.appsUrl}/api/apps/${opts.app}/manifest`, { headers: client.headers });
+        const resp = await zeaFetch(`${client.appsUrl}/api/apps/${opts.app}/manifest`, { headers: client.headers });
         if (!resp.ok) throw new Error(`API error: ${resp.status}`);
         const manifest = await resp.json();
         const states = manifest.states || {};
@@ -243,7 +244,7 @@ export function register(program) {
           ? `${client.appsUrl}/api/apps/${opts.app}/experiments/${opts.experiment}`
           : `${client.appsUrl}/api/apps/${opts.app}/manifest`;
 
-        const mResp = await fetch(manifestUrl, { headers: client.headers });
+        const mResp = await zeaFetch(manifestUrl, { headers: client.headers });
         if (!mResp.ok) throw new Error(`Manifest fetch failed: ${mResp.status}`);
         const manifest = await mResp.json();
 
@@ -274,7 +275,7 @@ export function register(program) {
           ? `${client.appsUrl}/api/apps/${opts.app}/experiments/${opts.experiment}`
           : `${client.appsUrl}/api/apps`;
 
-        const uResp = await fetch(uploadUrl, {
+        const uResp = await zeaFetch(uploadUrl, {
           method: opts.experiment ? 'PUT' : 'POST',
           headers: client.headers,
           body: JSON.stringify(opts.experiment ? { manifest } : payload)

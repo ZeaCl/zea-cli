@@ -1,3 +1,4 @@
+import zeaFetch from '../lib/http.js';
 import { execSync } from 'child_process';
 import chalk from 'chalk';
 
@@ -5,7 +6,7 @@ const DEEPSEEK_API = 'https://api.deepseek.com/v1/chat/completions';
 const DEEPSEEK_KEY = process.env.DEEPSEEK_API_KEY || process.env.DEEPSEEK_API_KEYS || '';
 
 async function askAI(prompt, context) {
-  const resp = await fetch(DEEPSEEK_API, {
+  const resp = await zeaFetch(DEEPSEEK_API, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${DEEPSEEK_KEY}` },
     body: JSON.stringify({
