@@ -94,15 +94,28 @@ zea validate --app sudlich_ventures --screen dashboard --visual --llm
 
 ### Datos (Excel → DB)
 ```bash
-# Analizar estructura de Excel
-zea screen analyze-file --file datos.xlsx --llm
+# Analizar estructura de Excel (vía CLI)
+zea xlsx view <file> [--sheet X] [--json]    # Ver contenido y estructura
+zea screen analyze-file --file datos.xlsx --llm  # Análisis LLM de columnas
 
 # Importar a la DB
-zea venture data import --file datos.xlsx --yes
+zea venture data import --file datos.xlsx --entity funds --yes
+zea venture data import --file datos.xlsx --entity investors --yes
+zea venture data import --file datos.xlsx --entity commitments --yes
 
 # Ver datos importados
 zea venture fund list
 zea venture investor list
+zea venture capital-call list
+
+# Crear entidades individuales
+zea venture fund create --name "Growth Fund" --type VENTURE_CAPITAL --size 50000000
+zea venture investor create --name "Alpha Capital" --email alpha@example.com --type INSTITUTIONAL
+zea venture capital-call create --fund-id X --amount 10000000
+
+# Verificar integridad de datos post-import
+zea verify --app sudlich_ventures --json
+zea verify --app sudlich_ventures --llm       # Reporte con explicación LLM
 ```
 
 ### Base de datos
@@ -155,6 +168,51 @@ curl -X POST localhost:4090/open -d '{"url":"http://sdui-engine:4006/app?app_id=
 curl -X POST localhost:4090/screenshot -d '{"filename":"dashboard.png"}'
 ```
 
+## 📱 Formato ---ACTIONS--- (Telegram inline keyboard)
+
+Cuando respondas a un usuario en Telegram, puedes incluir botones usando este formato al final de la respuesta:
+
+```
+Texto visible para el usuario...
+
+---ACTIONS---
+[
+  {"label":"📊 Importar fondos","prompt":"zea venture data import --sheet funds --yes"},
+  {"label":"💰 Importar inversores","prompt":"zea venture data import --sheet investors --yes"},
+  {"label":"📋 Verificar","prompt":"zea verify --app sudlich_ventures --json"}
+]
+```
+
+Reglas:
+- `label`: texto visible en el botón (máx 30 chars)
+- `prompt`: comando CLI de ZEA que se ejecuta al tocar el botón
+- Máximo 6 acciones, 2 por fila
+- El bot ZEA detecta comandos CLI en el prompt y los ejecuta con `execSync` (determinista, sin LLM)
+- Si el prompt NO es un comando CLI → se envía al orquestador (DeepSeek)
+
+## 🔄 Retry Loop
+
+Si un comando CLI falla, el bot sigue este protocolo:
+
+```
+1. Comando falla → ❌ registrado
+2. infra-expert diagnostica → zea diagnose --json
+3. Si es error de API → api-expert arregla
+4. Si es error de DB → db-expert arregla
+5. Reintentar comando original (×3 máximo)
+6. Si 3 reintentos fallan → reportar al usuario con diagnóstico
+```
+
+El agente externo NO necesita implementar el retry loop. El bot ZEA lo maneja automáticamente cuando ejecuta comandos CLI vía `executeExpertStep`.
+
+## 🛠️ Ejecución directa vs Orquestador
+
+| Método | Cuándo usarlo | Ejemplo |
+|---|---|---|
+| **CLI directo** | Tarea determinista, concreta | `zea venture fund list` |
+| **orchestrate** | Tarea compleja, multi-paso | `zea orchestrate "crear dominio nuevo para deportes"` |
+| **executeExpertStep** | El orquestador delega a un experto | `executeExpertStep("data-import", "importar Excel")` |
+
 ## Protocolo de respuesta
 
 Todos los comandos de ZEA (vía expertos) responden con formato estructurado:
@@ -176,21 +234,39 @@ Todos los comandos de ZEA (vía expertos) responden con formato estructurado:
 Cuando usás `zea orchestrate`, internamente se ejecuta este flujo:
 
 ```
-Orquestador (planifica)
+Orquestador (planifica vía DeepSeek)
   │
-  ├── db-expert (SQL, RLS)
+  ├── db-expert (SQL, RLS, migraciones)
   ├── api-expert (endpoints HTTP)
   ├── screen-expert (Stitch, data-zea-bind)
-  ├── infra-expert (diagnóstico, fixes)
-  ├── builder-expert (crear comandos CLI)
-  └── data-import-expert (Excel → DB)
+  ├── infra-expert (diagnóstico, fixes, retry loop)
+  ├── builder-expert (crear comandos CLI si faltan)
+  ├── data-import-expert (Excel → DB pipeline completo)
+  ├── value-proposition-expert (Customer Discovery)
+  ├── open-spec-expert (Requirements → Design → Tasks)
+  └── workflow-expert (crear/editar workflows)
 ```
 
 Cada experto tiene su propio system prompt (`experts/{name}/SYSTEM.md`) con:
-- Allowlist de comandos permitidos
+- Allowlist de comandos CLI permitidos
 - Conocimiento específico de su dominio
 - Reglas de negocio
-- Idioma español neutro (PROHIBIDO voseo argentino)
+- Idioma español neutro latinoamericano (PROHIBIDO voseo argentino)
+
+### Cómo funciona executeExpertStep
+
+```
+Orquestador decide: "esto lo hace el data-import-expert"
+  │
+  ▼
+executeExpertStep("data-import", "importar fondos del Excel X")
+  │
+  ├── 1. Carga experts/data-import/SYSTEM.md
+  ├── 2. DeepSeek genera comando CLI exacto: zea venture data import --file X --sheet funds --yes
+  ├── 3. execSync ejecuta el comando (determinista)
+  ├── 4. Si falla → retry loop (infra → fix → reintentar ×3)
+  └── 5. Resultado con evidencia: "✅ 3/3 fondos importados"
+```
 
 ## Ejemplos de uso por un agente externo
 
@@ -216,10 +292,30 @@ Agente:  "✅ Dashboard functionalizado. 24 bindings, score visual 92/100."
 ### Ejemplo 3: Importar datos
 ```
 Usuario: "Tengo este Excel con mis inversores"
-Agente:  zea screen analyze-file --file inversores.xlsx --llm
-         → 5 columnas: name, email, investor_type, is_qualified, tax_country
-Agente:  "El Excel tiene 5 columnas. name → name, email → email, ..."
-         zea venture data import --file inversores.xlsx --yes
-         → ✅ [COMPLETADO] 3 investors importados
-Agente:  "✅ 3 inversores importados correctamente."
+Agente:  zea xlsx view inversores.xlsx --json
+         → {"sheets":["investors"],"investors":{"columns":["name","email","type"],"rows":5}}
+Agente:  "El Excel tiene 5 inversores con name, email, type."
+         zea venture data import --file inversores.xlsx --entity investors --yes
+         → ✅ [COMPLETADO] 5/5 investors importados | evidencia: dashboard active_lps=17
+Agente:  "✅ 5 inversores importados. Total LPs en plataforma: 17."
+
+         // Verificar consolidación:
+         zea verify --app sudlich_ventures --json
+         → active_lps=17, active_funds=8
+Agente:  "Verificación OK: 17 LPs, 8 fondos. Todos los datos del Excel están en la DB."
+```
+
+### Ejemplo 4: Usar ---ACTIONS--- en Telegram
+```
+Agente responde en Telegram:
+         "Encontré 5 inversores en el Excel. ¿Qué quieres hacer?"
+
+         ---ACTIONS---
+         [
+           {"label":"📊 Importar fondos","prompt":"zea venture data import --sheet funds --yes"},
+           {"label":"💰 Importar inversores","prompt":"zea venture data import --sheet investors --yes"},
+           {"label":"📋 Verificar","prompt":"zea verify --app sudlich_ventures --json"}
+         ]
+
+         → El usuario ve botones. Al tocar uno, el bot ejecuta el CLI directo.
 ```

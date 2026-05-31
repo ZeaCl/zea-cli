@@ -2,7 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
 import chalk from 'chalk';
-import { execSync } from 'child_process';
+import { execSync, spawn } from 'child_process';
 
 const QA_DIR = path.join(os.homedir(), '.zea', 'memory', 'qa');
 const PLAN_FILE = path.join(QA_DIR, 'plan.json');
@@ -95,6 +95,8 @@ export function register(program) {
     .description('Execute a test or phase via opencode agent')
     .option('--test <id>', 'Test ID (e.g. F2, C1)')
     .option('--phase <id>', 'Phase ID (e.g. f_screen_func)')
+    .option('--telegram', 'E2E via Telegram bot (full user path + evidence)')
+    .option('--timeout <s>', 'Timeout in seconds (default 120)', '120')
     .option('--json', 'Output as JSON')
     .action(async (opts) => {
       const plan = await loadPlan();
@@ -106,6 +108,54 @@ export function register(program) {
         return null;
       };
 
+      // ── Telegram E2E path ─────────────────────────────────
+      if (opts.telegram) {
+        const runnerScript = path.join(os.homedir(), '.zea', 'scripts', 'e2e_runner.js');
+
+        // Check that runner exists
+        try { await fs.access(runnerScript); } catch {
+          console.error(chalk.red(`❌ e2e_runner.js no encontrado en ${runnerScript}`));
+          console.error('   Instalalo con: cp ~/.zea/scripts/e2e_runner.js al path correcto');
+          return;
+        }
+
+        // Check that bot HTTP endpoint is alive
+        try {
+          const healthResp = await fetch('http://localhost:4099/health', { signal: AbortSignal.timeout(5000) });
+          if (!healthResp.ok) throw new Error('unhealthy');
+        } catch {
+          console.error(chalk.red('❌ Bot HTTP endpoint no responde en http://localhost:4099/health'));
+          console.error('   Arrancá el bot con: ~/.zea/scripts/start_bot.sh');
+          return;
+        }
+
+        const args = [
+          runnerScript,
+          opts.test ? `--test=${opts.test}` : '',
+          opts.phase ? `--phase=${opts.phase}` : '',
+          `--timeout=${opts.timeout}`,
+          opts.json ? '--json' : ''
+        ].filter(Boolean);
+
+        console.log(chalk.bold(`\n═══ E2E Telegram: ${opts.test || opts.phase || 'all'} ═══`));
+        console.log(chalk.dim(`Runner: node ${args.join(' ')}\n`));
+
+        try {
+          const result = execSync(`node ${args.join(' ')}`, {
+            encoding: 'utf8',
+            timeout: (parseInt(opts.timeout) + 30) * 1000,
+            maxBuffer: 10 * 1024 * 1024,
+            stdio: 'inherit'
+          });
+          if (result) console.log(result);
+        } catch (e) {
+          console.error(chalk.red(`❌ E2E runner error: ${e.message}`));
+          if (e.stdout) console.log(chalk.dim(e.stdout?.toString()?.slice(-500)));
+        }
+        return;
+      }
+
+      // ── Legacy docker exec path ────────────────────────────
       if (opts.test) {
         const t = findTest(opts.test);
         if (!t) { console.error(`Test ${opts.test} not found`); return; }
@@ -113,6 +163,7 @@ export function register(program) {
         console.log(chalk.bold(`\n═══ Ejecutando ${t.id.toUpperCase()}: ${t.test.desc} ═══\n`));
         console.log(chalk.dim(`Prompt esperado: "${t.test.desc}"`));
         console.log(chalk.dim(`Resultado esperado: "${t.test.expected}"\n`));
+        console.log(chalk.yellow('⚠️  Usando docker exec mode (legacy). Para E2E real usá --telegram.\n'));
 
         // Execute via opencode agent in Docker
         try {

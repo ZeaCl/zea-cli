@@ -171,56 +171,47 @@ async function check_stitch() {
 async function check_glia() {
   console.log(`\n${CHECKS.glia}`);
   let passed = 0;
-  const client = await getClient();
 
-  // Skills loaded
+  // Glia health endpoint (nueva Glia en port 4002)
   try {
-    const r = await fetch('http://glia.zea.localhost/api/skills', {
-      headers: { 'Authorization': `Bearer ${client.token}` },
-      signal: AbortSignal.timeout(5000)
-    });
+    const r = await fetch('http://localhost:4002/api/health', { signal: AbortSignal.timeout(5000) });
     if (r.ok) {
       const data = await r.json();
-      const skills = data.skills || [];
-      const totalTools = skills.reduce((sum, s) => sum + (s.tools_count || 0), 0);
-      ok(`Skills: ${skills.length} loaded, ${totalTools} tools`);
+      ok(`Glia health: ${data.status} (v${data.version})`);
       passed++;
     } else {
-      fail(`Skills endpoint: ${r.status}`);
+      fail(`Glia health: ${r.status}`);
     }
-  } catch (e) { fail(`Skills: ${e.message}`); }
+  } catch (e) { fail(`Glia health: ${e.message}`); }
 
-  // Agents running
+  // Agents list
   try {
-    const r = await fetch('http://glia.zea.localhost/api/agents', {
-      headers: { 'Authorization': `Bearer ${client.token}` },
-      signal: AbortSignal.timeout(5000)
-    });
+    const r = await fetch('http://localhost:4002/api/agents', { signal: AbortSignal.timeout(5000) });
     if (r.ok) {
       const data = await r.json();
-      const agents = data.data || data.agents || [];
-      ok(`Agents: ${agents.length} running`);
+      ok(`Agents: ${data.count || 0} running`);
       passed++;
     }
   } catch (e) { warn(`Agents: ${e.message}`); }
 
-  // Model check
+  // DeepSeek model check
   try {
+    const dsKey = process.env.DEEPSEEK_API_KEY || process.env.DEEPSEEK_API_KEYS?.split(',')[0] || '';
     const r = await fetch('https://api.deepseek.com/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.DEEPSEEK_API_KEY || process.env.DEEPSEEK_API_KEYS?.split(',')[0] || ''}`,
+        'Authorization': `Bearer ${dsKey}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'deepseek-v4-pro',
+        model: 'deepseek-chat',
         messages: [{ role: 'user', content: 'hi' }],
         max_tokens: 5,
         stream: false
       }),
       signal: AbortSignal.timeout(10000)
     });
-    if (r.ok) { ok('DeepSeek v4 Pro reachable'); passed++; }
+    if (r.ok) { ok('DeepSeek reachable'); passed++; }
     else { warn(`DeepSeek: ${r.status}`); }
   } catch (e) { warn(`DeepSeek: ${e.message}`); }
 

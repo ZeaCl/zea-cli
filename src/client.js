@@ -62,7 +62,8 @@ export async function getClient() {
   const ventureUrl = process.env.ZEA_VENTURE_URL || config.ventureUrl || 'http://venture.zea.localhost';
   const sduiUrl = process.env.ZEA_SDUI_URL || config.sduiUrl || 'http://sdui.zea.localhost';
   const appsUrl = process.env.ZEA_APPS_URL || config.appsUrl || 'http://apps.zea.localhost';
-  const gliaUrl = process.env.ZEA_GLIA_URL || config.gliaUrl || 'http://glia.zea.localhost';
+  const gliaUrl = process.env.ZEA_GLIA_URL || config.gliaUrl || 'http://localhost:4002';
+  const gliaWsUrl = process.env.ZEA_GLIA_WS_URL || config.gliaWsUrl || 'ws://localhost:4002/socket/websocket';
   const sensorUrl = process.env.ZEA_SENSOR_URL || config.sensorUrl || 'http://sensor.zea.localhost';
 
   if (!token) {
@@ -76,6 +77,7 @@ export async function getClient() {
     sduiUrl,
     appsUrl,
     gliaUrl,
+    gliaWsUrl,
     sensorUrl,
     token,
     activeOrgId,

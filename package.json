@@ -5,8 +5,7 @@
   "type": "module",
   "main": "src/index.js",
   "bin": {
-    "zea": "./src/index.js",
-    "glia": "./src/glia.js"
+    "zea": "./src/index.js"
   },
   "scripts": {
     "start": "node src/index.js"

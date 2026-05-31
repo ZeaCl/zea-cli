@@ -235,34 +235,34 @@ registerXlsx(program);program.command('mcp')
               }
             },
             {
-              name: 'glia_list_missions',
-              description: 'Lista todas las misiones disponibles en ~/.zea/agents/ (cada misión define el comportamiento y skills de un agente Glia)',
-              inputSchema: { type: 'object', properties: {} }
-            },
-            {
-              name: 'glia_create_agent',
-              description: 'Crea un nuevo agente Glia con una misión y skills específicas',
+              name: 'glia_swarm_create',
+              description: 'Crea un nuevo agente especialista en el swarm Glia',
               inputSchema: {
                 type: 'object',
                 properties: {
                   name: { type: 'string', description: 'Nombre del agente' },
-                  mission: { type: 'string', description: 'Misión a cargar (desde ~/.zea/agents/{mission})' },
-                  skills: { type: 'string', description: 'Skills separadas por coma' }
+                  capabilities: { type: 'string', description: 'Capabilities separadas por coma (bash, elixir, filesystem, etc.)' },
+                  system_prompt: { type: 'string', description: 'System prompt personalizado' }
                 },
                 required: ['name']
               }
             },
             {
-              name: 'glia_set_soul',
-              description: 'Crea o actualiza la identidad (SOUL.md) de una misión de agente Glia',
+              name: 'glia_chat',
+              description: 'Envía un mensaje al agente Glia vía WebSocket y recibe streaming en tiempo real',
               inputSchema: {
                 type: 'object',
                 properties: {
-                  mission: { type: 'string', description: 'Nombre de la misión' },
-                  content: { type: 'string', description: 'Contenido del SOUL.md (markdown)' }
+                  message: { type: 'string', description: 'Mensaje a enviar' },
+                  tools: { type: 'string', description: 'Tools separadas por coma (bash, filesystem, etc.)' }
                 },
-                required: ['mission', 'content']
+                required: ['message']
               }
+            },
+            {
+              name: 'glia_list_agents',
+              description: 'Lista agentes activos en el swarm Glia',
+              inputSchema: { type: 'object', properties: {} }
             }
           ]
         };
@@ -463,38 +463,33 @@ registerXlsx(program);program.command('mcp')
                 content: [{ type: 'text', text: parts.join('\n') }]
               };
             }
-            case 'glia_list_missions': {
-              const response = await fetch(`${client.gliaUrl}/api/missions`, { headers: client.headers });
-              if (!response.ok) throw new Error(`HTTP error ${response.status}`);
-              const result = await response.json();
+            case 'glia_swarm_create': {
               return {
-                content: [{ type: 'text', text: JSON.stringify(result.data || [], null, 2) }]
+                content: [{ type: 'text', text: JSON.stringify({
+                  instruction: 'Use the Glia CLI to create an agent via WebSocket',
+                  cli: `zea glia agent create ${args.name}${args.capabilities ? ' --skills ' + args.capabilities : ''}`,
+                  note: 'Glia agents are created via WebSocket, not REST. Use the CLI command above.'
+                }, null, 2) }]
               };
             }
-            case 'glia_create_agent': {
-              const body = { name: args.name, skills: args.skills ? args.skills.split(',').map(s => s.trim()) : [] };
-              if (args.mission) body.mission = args.mission;
-              const response = await fetch(`${client.gliaUrl}/api/agents`, {
-                method: 'POST',
-                headers: { ...client.headers, 'Content-Type': 'application/json' },
-                body: JSON.stringify(body)
-              });
-              if (!response.ok) throw new Error(`HTTP error ${response.status}`);
-              const result = await response.json();
+            case 'glia_chat': {
               return {
-                content: [{ type: 'text', text: `Agent '${result.name}' created with status: ${result.status}${result.skills?.length ? ', skills: ' + result.skills.join(', ') : ''}` }]
+                content: [{ type: 'text', text: JSON.stringify({
+                  instruction: 'Connect to Glia WebSocket for streaming chat',
+                  ws_url: client.gliaWsUrl || 'ws://localhost:4002/socket/websocket',
+                  session_id: 'mcp-' + Date.now(),
+                  message: args.message,
+                  tools: args.tools ? args.tools.split(',').map(s => s.trim()) : [],
+                  cli: `zea glia chat "${args.message}"${args.tools ? ' --tools ' + args.tools : ''}`
+                }, null, 2) }]
               };
             }
-            case 'glia_set_soul': {
-              const response = await fetch(`${client.gliaUrl}/api/missions`, {
-                method: 'POST',
-                headers: { ...client.headers, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: args.mission, soul: args.content })
-              });
+            case 'glia_list_agents': {
+              const response = await fetch(`${client.gliaUrl}/api/agents`, { headers: client.headers });
               if (!response.ok) throw new Error(`HTTP error ${response.status}`);
               const result = await response.json();
               return {
-                content: [{ type: 'text', text: `Mission '${result.data.name}' ${result.data.status}` }]
+                content: [{ type: 'text', text: JSON.stringify(result.agents || [], null, 2) }]
               };
             }
             default:

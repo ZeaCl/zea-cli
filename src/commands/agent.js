@@ -8,286 +8,21 @@ import os from 'os';
 import { execSync } from 'child_process';
 
 export function register(program) {
-  const agentCmd = program.command('agent').description('Agent management (Glia/ReactAgent)');
-
-  agentCmd.command('chat <message>')
-    .description('Chat directly with Glia agent (SSE streaming)')
-    .option('--plan', 'Plan mode (solo análisis, no ejecuta cambios)')
-    .option('--backend <name>', 'Agent backend: opencode (default) o react')
-    .action(async (message, options) => {
-      try {
-        const client = await getClient();
-        const backend = options.backend || 'opencode';
-        const planMode = options.plan || false;
-
-        console.log(chalk.dim(`Glia (${backend}) — conectando...\n`));
-
-        const response = await fetch(`${client.gliaUrl}/api/agent/chat`, {
-          method: 'POST',
-          headers: client.headers,
-          body: JSON.stringify({ text: message, plan_mode: planMode })
-        });
-
-        if (!response.ok) {
-          Display.errorMsg(`HTTP ${response.status}`);
-          process.exit(1);
-        }
-
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
-        let eventType = '';
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-
-          const lines = buffer.split('\n');
-          buffer = lines.pop() || '';
-
-          for (const line of lines) {
-            if (line.startsWith('event: ')) {
-              eventType = line.slice(7).trim();
-            } else if (line.startsWith('data: ')) {
-              const jsonStr = line.slice(6);
-              try {
-                const data = JSON.parse(jsonStr);
-                switch (eventType) {
-                  case 'reasoning': Display.reasoning(data.text || ''); break;
-                  case 'tool': Display.tool(data.text || '', data.status); break;
-                  case 'text': Display.message(data.text || ''); break;
-                  case 'question': Display.question(data.text || ''); break;
-                  case 'error': Display.errorMsg(data.message || data.text || ''); break;
-                  case 'done': Display.done(); break;
-                  default: if (data.text) console.log(data.text);
-                }
-              } catch { /* skip malformed JSON */ }
-            }
-          }
-        }
-        process.exit(0);
-      } catch (e) {
-        Display.errorMsg(e.message);
-        process.exit(1);
-      }
-    });
-
-  agentCmd.command('interactive')
-    .description('Interactive chat with Glia (REPL with /plan, /build, /exit)')
-    .option('--backend <name>', 'Agent backend: opencode (default) o react')
-    .action(async (options) => {
-      try {
-        const client = await getClient();
-        const backend = options.backend || 'opencode';
-        let planMode = false;
-        let sessionId = null;
-
-        console.log(chalk.dim(`\nGlia (${backend}) — sesión interactiva`));
-        console.log(chalk.dim('Comandos: /plan /build /clear /exit\n'));
-
-        const readline = (await import('readline')).default;
-        const rl = readline.createInterface({
-          input: process.stdin,
-          output: process.stdout,
-          prompt: chalk.cyan('▸ '),
-        });
-        rl.prompt();
-
-        const sendAndStream = async (text) => {
-          const body = { text, plan_mode: planMode };
-          if (sessionId) body.session_id = sessionId;
-
-          const response = await fetch(`${client.gliaUrl}/api/agent/chat`, {
-            method: 'POST',
-            headers: client.headers,
-            body: JSON.stringify(body)
-          });
-
-          if (!response.ok) {
-            Display.errorMsg(`HTTP ${response.status}`);
-            rl.prompt();
-            return;
-          }
-
-          const reader = response.body.getReader();
-          const decoder = new TextDecoder();
-          let buffer = '';
-          let eventType = '';
-
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            buffer += decoder.decode(value, { stream: true });
-
-            const lines = buffer.split('\n');
-            buffer = lines.pop() || '';
-
-            for (const line of lines) {
-              if (line.startsWith('event: ')) {
-                eventType = line.slice(7).trim();
-              } else if (line.startsWith('data: ')) {
-                const jsonStr = line.slice(6);
-                try {
-                  const data = JSON.parse(jsonStr);
-                  switch (eventType) {
-                    case 'reasoning': Display.reasoning(data.text || ''); break;
-                    case 'tool': Display.tool(data.text || '', data.status); break;
-                    case 'text': Display.message(data.text || ''); break;
-                    case 'question': Display.question(data.text || ''); break;
-                    case 'error': Display.errorMsg(data.message || data.text || ''); break;
-                    case 'done': Display.done(); rl.prompt(); break;
-                    default: if (data.text) console.log(data.text);
-                  }
-                } catch { /* skip */ }
-              }
-            }
-          }
-        };
-
-        rl.on('line', async (line) => {
-          const input = line.trim();
-          if (input === '/exit') { console.log(chalk.dim('Chau!\n')); rl.close(); return; }
-          if (input === '/plan') { planMode = true; console.log(chalk.yellow('  [plan mode activado]\n')); rl.prompt(); return; }
-          if (input === '/build') { planMode = false; console.log(chalk.green('  [build mode activado]\n')); rl.prompt(); return; }
-          if (input === '/clear') { console.clear(); rl.prompt(); return; }
-          if (input === '/new') { sessionId = null; console.log(chalk.dim('  [nueva sesión]\n')); rl.prompt(); return; }
-          if (!input) { rl.prompt(); return; }
-
-          await sendAndStream(input);
-        });
-      } catch (e) {
-        Display.errorMsg(e.message);
-        process.exit(1);
-      }
-    });
-
-  agentCmd.command('list')
-    .description('List running agents and their assigned skills')
-    .action(async () => {
-      try {
-        const client = await getClient();
-        const response = await fetch(`${client.gliaUrl}/api/agents`, { headers: client.headers });
-        if (!response.ok) {
-          const errData = await response.json();
-          throw new Error(errData.error || `HTTP error ${response.status}`);
-        }
-        const result = await response.json();
-        const agents = result.agents || [];
-        if (agents.length === 0) { console.log('No agents running.'); return; }
-        console.log('Active Agents:');
-        agents.forEach(a => console.log(`  ${a.name}: ${a.status} | skills: [${(a.skills||[]).join(', ')}] | users: ${a.user_count || 0}`));
-      } catch (e) {
-        console.error('Error:', e.message);
-      }
-    });
-
-  agentCmd.command('create <name>')
-    .description('Create a new agent')
-    .option('--skills <list>', 'Comma-separated skill names')
-    .option('--mission <mission>', 'Agent mission (loads SOUL.md + skills from ~/.zea/agents/{mission})')
-    .action(async (name, options) => {
-      try {
-        const client = await getClient();
-        const skills = options.skills ? options.skills.split(',').map(s => s.trim()) : [];
-        const body = { name, skills };
-        if (options.mission) body.mission = options.mission;
-        const response = await fetch(`${client.gliaUrl}/api/agents`, {
-          method: 'POST',
-          headers: client.headers,
-          body: JSON.stringify({ name, skills })
-        });
-        if (!response.ok) {
-          const errData = await response.json();
-          throw new Error(errData.error || `HTTP error ${response.status}`);
-        }
-        const result = await response.json();
-        console.log(`Agent '${result.name}' created [${result.status}]`);
-        if (result.skills?.length) console.log(`  Skills: ${result.skills.join(', ')}`);
-      } catch (e) {
-        console.error('Error:', e.message);
-      }
-    });
-
-  agentCmd.command('assign <name>')
-    .description('Assign a skill to a running agent (hot-reload)')
-    .requiredOption('--skill <skill>', 'Skill name to assign')
-    .action(async (name, options) => {
-      try {
-        const client = await getClient();
-        const response = await fetch(`${client.gliaUrl}/api/agents/${encodeURIComponent(name)}/skills`, {
-          method: 'POST',
-          headers: client.headers,
-          body: JSON.stringify({ skill: options.skill })
-        });
-        if (!response.ok) {
-          const errData = await response.json();
-          throw new Error(errData.error || `HTTP error ${response.status}`);
-        }
-        const result = await response.json();
-        console.log(`Skill '${options.skill}' assigned to agent '${name}' [hot-reload]`);
-        console.log(`  Active skills: ${(result.skills||[]).join(', ')}`);
-      } catch (e) {
-        console.error('Error:', e.message);
-      }
-    });
-
-  agentCmd.command('remove <name>')
-    .description('Remove a skill from a running agent')
-    .requiredOption('--skill <skill>', 'Skill name to remove')
-    .action(async (name, options) => {
-      try {
-        const client = await getClient();
-        const response = await fetch(`${client.gliaUrl}/api/agents/${encodeURIComponent(name)}/skills/${encodeURIComponent(options.skill)}`, {
-          method: 'DELETE',
-          headers: client.headers
-        });
-        if (!response.ok) {
-          const errData = await response.json();
-          throw new Error(errData.error || `HTTP error ${response.status}`);
-        }
-        const result = await response.json();
-        console.log(`Skill '${options.skill}' removed from agent '${name}'`);
-        console.log(`  Active skills: ${(result.skills||[]).join(', ')}`);
-      } catch (e) {
-        console.error('Error:', e.message);
-      }
-    });
-
-  agentCmd.command('stop <name>')
-    .description('Stop an agent')
-    .action(async (name) => {
-      try {
-        const client = await getClient();
-        const response = await fetch(`${client.gliaUrl}/api/agents/${encodeURIComponent(name)}`, {
-          method: 'DELETE',
-          headers: client.headers
-        });
-        if (!response.ok) {
-          const errData = await response.json();
-          throw new Error(errData.error || `HTTP error ${response.status}`);
-        }
-        console.log(`Agent '${name}' stopped.`);
-      } catch (e) {
-        console.error('Error:', e.message);
-      }
-    });
+  const agentCmd = program.command('agent').description('Agent management (ZEA apps, missions, autonomous ops)');
 
   agentCmd.command('missions')
     .description('List available agent missions from ~/.zea/agents/')
     .action(async () => {
       try {
-        const client = await getClient();
-        const response = await fetch(`${client.gliaUrl}/api/missions`, { headers: client.headers });
-        if (!response.ok) throw new Error(`HTTP error ${response.status}`);
-        const result = await response.json();
-        const missions = result.data || [];
-        if (missions.length === 0) { console.log('No missions found.'); return; }
-        console.log('Available missions:');
-        missions.forEach(m => console.log(`  ${m}`));
-      } catch (e) {
-        console.error('Error:', e.message);
-      }
+        const missionsDir = path.join(os.homedir(), '.zea', 'agents');
+        try {
+          const entries = await fs.readdir(missionsDir, { withFileTypes: true });
+          const missions = entries.filter(e => e.isDirectory()).map(e => e.name);
+          if (missions.length === 0) { console.log('No missions found.'); return; }
+          console.log('Available missions:');
+          missions.forEach(m => console.log(`  ${m}`));
+        } catch { console.log('No missions found.'); }
+      } catch (e) { console.error('Error:', e.message); }
     });
 
   agentCmd.command('set-soul <mission>')
@@ -295,23 +30,13 @@ export function register(program) {
     .argument('<file>', 'Path to SOUL.md file')
     .action(async (mission, file) => {
       try {
-        const client = await getClient();
-        const fs = await import('fs/promises');
         const content = await fs.readFile(file, 'utf8');
-        const response = await fetch(`${client.gliaUrl}/api/missions`, {
-          method: 'POST',
-          headers: { ...client.headers, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: mission, soul: content })
-        });
-        if (!response.ok) throw new Error(`HTTP error ${response.status}`);
-        const result = await response.json();
-        console.log(`Mission '${result.data.name}' ${result.data.status}`);
-      } catch (e) {
-        console.error('Error:', e.message);
-      }
+        const missionDir = path.join(os.homedir(), '.zea', 'agents', mission);
+        await fs.mkdir(missionDir, { recursive: true });
+        await fs.writeFile(path.join(missionDir, 'SOUL.md'), content);
+        console.log(`Mission '${mission}' SOUL.md updated (${content.length} bytes)`);
+      } catch (e) { console.error('Error:', e.message); }
     });
-
-  // ─── Autonomous Improvement ──────────────────────────
 
   const MEMORY_DIR = path.join(os.homedir(), '.zea', 'memory');
 
@@ -352,28 +77,24 @@ export function register(program) {
         const issues = [];
         console.log('═══ Agent Scan: ' + opts.app + ' ═══\n');
 
-        // 1. Stitch screens not in manifest
         const mem = await readAppMemory(opts.app, 'stitch.json');
         const apiKey = opts.stitchKey || process.env.STITCH_KEY;
         if (mem?.project_id && apiKey) {
           const stitchScreens = await fetchStitchScreens(apiKey, mem.project_id);
           const imported = mem.screen_mappings || {};
-          const missing = stitchScreens.filter(s =>
-            !Object.values(imported).some(i => i.stitch_id === s.id)
-          );
+          const missing = stitchScreens.filter(s => !Object.values(imported).some(i => i.stitch_id === s.id));
           console.log('📋 Stitch Screens: ' + stitchScreens.length + ' total, ' + Object.keys(imported).length + ' imported');
           if (missing.length === 0) {
             console.log('   ✅ All screens imported');
           } else {
             for (const s of missing) {
-              console.log('   ⬜ ' + s.title + ' (' + s.id.substring(0,15) + '...)');
+              console.log('   ⬜ ' + s.title + ' (' + s.id.substring(0, 15) + '...)');
               issues.push({ type: 'screen_missing', screen_id: s.id, title: s.title });
             }
           }
         }
         console.log('');
 
-        // 2. Manifest checks
         const mResp = await fetch(client.appsUrl + '/api/apps/' + opts.app + '/manifest', { headers: client.headers });
         if (mResp.ok) {
           const manifest = await mResp.json();
@@ -387,17 +108,9 @@ export function register(program) {
             console.log("   ⬜ State '" + s + "' has no intent routing");
             issues.push({ type: 'missing_intent', state: s });
           }
-          for (const item of sidebarItems) {
-            const val = item.action?.value;
-            if (val && !Object.keys(intents).includes(val)) {
-              console.log("   ⬜ Sidebar '" + item.label + "' → intent '" + val + "' not defined");
-              issues.push({ type: 'missing_intent_sidebar', label: item.label, intent: val });
-            }
-          }
         }
         console.log('');
 
-        // 3. Learning issues
         const learnings = await readAppMemory(opts.app, 'learnings.json');
         if (learnings?.actions) {
           console.log('🩺 Learning Issues:');
@@ -408,51 +121,13 @@ export function register(program) {
               issues.push({ type: 'low_confidence', action: name });
               count++;
             }
-            for (const e of (stats.common_errors || [])) {
-              console.log('   ⚠️  ' + name + ': ' + (e.error || '').substring(0, 80));
-              issues.push({ type: 'error_pattern', action: name });
-              count++;
-            }
           }
           if (count === 0) console.log('   ✅ All actions healthy');
         }
 
-        // ── 4. Sensor Events ──
-        try {
-          const sResp = await fetch(client.sensorUrl + '/api/sensor/events?status=ingested&limit=20', { headers: client.headers });
-          if (sResp.ok) {
-            const sData = await sResp.json();
-            const sEvents = sData.data || sData.events || [];
-            console.log('\n📡 Sensor Events: ' + sEvents.length + ' pending');
-            if (sEvents.length > 0) {
-              for (const ev of sEvents) {
-                const source = ev.source || 'unknown';
-                const id = (ev.id || '').substring(0, 12);
-                console.log('   ⬜ ' + id + '... (' + source + ') — needs processing');
-                issues.push({ type: 'sensor_pending', event_id: ev.id, source });
-              }
-            } else {
-              console.log('   ✅ No pending events');
-            }
-            const fResp = await fetch(client.sensorUrl + '/api/sensor/events?status=failed&limit=10', { headers: client.headers });
-            if (fResp.ok) {
-              const fData = await fResp.json();
-              const fEvents = fData.data || fData.events || [];
-              if (fEvents.length > 0) {
-                console.log('   🔴 ' + fEvents.length + ' failed events (retry)');
-                for (const ev of fEvents) issues.push({ type: 'sensor_failed', event_id: ev.id });
-              }
-            }
-          }
-        } catch (e) {
-          console.log('\n📡 Sensor: not available');
-        }
-
         console.log('\n════ ' + issues.length + ' issues found ═══');
         if (issues.length > 0) console.log('Run: zea agent improve --app ' + opts.app + ' --auto');
-      } catch (e) {
-        console.error('Error:', e.message);
-      }
+      } catch (e) { console.error('Error:', e.message); }
     });
 
   agentCmd.command('improve')
@@ -464,7 +139,6 @@ export function register(program) {
       try {
         const client = await getClient();
         let fixed = 0, failed = 0;
-
         console.log('═══ Auto-Improve: ' + opts.app + ' ═══\n');
 
         const mem = await readAppMemory(opts.app, 'stitch.json');
@@ -472,9 +146,7 @@ export function register(program) {
         if (mem?.project_id && apiKey) {
           const stitchScreens = await fetchStitchScreens(apiKey, mem.project_id);
           const imported = mem.screen_mappings || {};
-          const missing = stitchScreens.filter(s =>
-            !Object.values(imported).some(i => i.stitch_id === s.id)
-          );
+          const missing = stitchScreens.filter(s => !Object.values(imported).some(i => i.stitch_id === s.id));
 
           for (const s of missing) {
             const stateName = s.title.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').substring(0, 30);
@@ -534,12 +206,8 @@ export function register(program) {
 
         console.log('\n═══ ' + fixed + ' fixed, ' + failed + ' failed ═══');
         if (fixed > 0) console.log("Run 'zea learn analyze --app " + opts.app + "' to update learnings.");
-      } catch (e) {
-        console.error('Error:', e.message);
-      }
+      } catch (e) { console.error('Error:', e.message); }
     });
-
-  // ─── Autonomous Planning ───────────────────────────
 
   agentCmd.command('plan')
     .description('Analyze a request and generate a step-by-step plan with Lego pieces')
@@ -550,7 +218,6 @@ export function register(program) {
         const client = await getClient();
         console.log(`═══ PLAN: ${opts.request} ═══\n`);
 
-        // 1. Current state
         console.log('📊 Current State:');
         let states = 0, intents = 0, primary = '?';
         try {
@@ -564,7 +231,6 @@ export function register(program) {
           }
         } catch { console.log('   (manifest unavailable)'); }
 
-        // 2. Analyze request → identify layers
         const req = opts.request.toLowerCase();
         console.log('\n🧱 Lego Pieces needed:');
 
@@ -573,7 +239,7 @@ export function register(program) {
 
         if (req.includes('screen') || req.includes('pantalla') || req.includes('import')) {
           plan.push({ step: 1, action: 'design.import-screen', desc: 'Importar screen de Stitch', lego: '🎨 Design', cli: 'zea design import-screen --app ' + opts.app + ' --screen-id <id> --state <name> --intent <intent>', confidence: 0.85 });
-          plan.push({ step: 2, action: 'shell.update-sidebar', desc: 'Agregar al menú lateral', lego: '🟨 Shell', cli: 'zea shell update-sidebar --app ' + opts.app + ' --items \'[...]\'', confidence: 0.80 });
+          plan.push({ step: 2, action: 'shell.update-sidebar', desc: 'Agregar al menú lateral', lego: '🟨 Shell', cli: 'zea shell update-sidebar --app ' + opts.app + " --items '[...]'", confidence: 0.80 });
           plan.push({ step: 3, action: 'memory.set', desc: 'Registrar en memoria', lego: '🟪 Memory', cli: 'zea memory set --app ' + opts.app + ' --key stitch.screen_mappings.<name> --value \'...\'', confidence: 0.90 });
         }
 
@@ -582,7 +248,7 @@ export function register(program) {
         }
 
         if (req.includes('menu') || req.includes('sidebar') || req.includes('lateral')) {
-          plan.push({ step: plan.length + 1, action: 'shell.update-sidebar', desc: 'Modificar menú lateral', lego: '🟨 Shell', cli: 'zea shell update-sidebar --app ' + opts.app + ' --items \'[...]\'', confidence: 0.80 });
+          plan.push({ step: plan.length + 1, action: 'shell.update-sidebar', desc: 'Modificar menú lateral', lego: '🟨 Shell', cli: 'zea shell update-sidebar --app ' + opts.app + " --items '[...]'", confidence: 0.80 });
         }
 
         if (req.includes('dato') || req.includes('data') || req.includes('endpoint') || req.includes('api')) {
@@ -593,19 +259,17 @@ export function register(program) {
           plan.push({ step: plan.length + 1, action: 'shell.update-chat', desc: 'Modificar chat', lego: '🟨 Shell', cli: 'zea shell update-chat --app ' + opts.app + ' --key <key> --value \'<json>\'', confidence: 0.75 });
         }
 
-        // Always add safety + verify
         plan.unshift({ step: 0, action: 'experiment.create', desc: 'Crear rama segura', lego: '🔒 Experiment', cli: `zea experiment create --app ${opts.app} --name ${experimentName}`, confidence: 0.95 });
         plan.push({ step: plan.length, action: 'doctor.check', desc: 'Validar cambios', lego: '🟧 Doctor', cli: 'zea doctor check venture', confidence: 0.85 });
         plan.push({ step: plan.length, action: 'experiment.merge', desc: 'Merge a producción', lego: '🔒 Experiment', cli: `zea experiment merge --app ${opts.app} --name ${experimentName}`, confidence: 0.90 });
 
         if (plan.length <= 3) {
           console.log('   ⚠️  Request too generic — add more specifics.');
-          console.log(`   Try: "Agregar una screen nueva desde Stitch"`);
-          console.log(`   or: "Cambiar el color primary a azul oscuro"`);
+          console.log('   Try: "Agregar una screen nueva desde Stitch"');
+          console.log('   or: "Cambiar el color primary a azul oscuro"');
           return;
         }
 
-        // 3. Show plan
         console.log('\n📋 Execution Plan:');
         for (const p of plan) {
           const confIcon = p.confidence >= 0.85 ? '🟢' : p.confidence >= 0.7 ? '🟡' : '🔴';
@@ -614,12 +278,10 @@ export function register(program) {
           console.log(`  Confidence: ${confIcon} ${Math.round(p.confidence * 100)}%`);
         }
 
-        // 4. Summary
         const legoSet = [...new Set(plan.map(p => p.lego))];
         console.log(`\n═══ ${plan.length} steps, ${legoSet.length} Lego pieces ═══`);
         console.log(`Execute: zea agent execute --app ${opts.app} --name ${experimentName} --auto`);
 
-        // 5. Save plan to memory
         const memDir = path.join(MEMORY_DIR, 'apps', opts.app);
         await fs.mkdir(memDir, { recursive: true });
         const plansPath = path.join(memDir, 'plans.json');
@@ -627,11 +289,8 @@ export function register(program) {
         try { plans = JSON.parse(await fs.readFile(plansPath, 'utf8')); } catch {}
         plans.push({ request: opts.request, plan, created: new Date().toISOString(), experiment: experimentName });
         await fs.writeFile(plansPath, JSON.stringify(plans.slice(-20), null, 2));
-        console.log(`\nPlan saved to memory.`);
-
-      } catch (e) {
-        console.error('Error:', e.message);
-      }
+        console.log('\nPlan saved to memory.');
+      } catch (e) { console.error('Error:', e.message); }
     });
 
   agentCmd.command('execute')
@@ -663,14 +322,12 @@ export function register(program) {
           if (p.action === 'experiment.create') {
             console.log(`Step ${p.step}: ${p.lego} ${p.desc}`);
             console.log(`  → Creating experiment: ${opts.name}`);
-
             await withLearning(opts.app, p.action, async () => {
               const r = await fetch(`${client.appsUrl}/api/apps/${opts.app}/experiments`, {
-                method: 'POST',
-                headers: client.headers,
+                method: 'POST', headers: client.headers,
                 body: JSON.stringify({ name: opts.name, app_id: opts.app })
               });
-              if (r.ok) { console.log(`  ✅ Experiment created`); passed++; }
+              if (r.ok) { console.log('  ✅ Experiment created'); passed++; }
               else { console.log(`  ❌ Failed: ${r.status}`); failed++; }
             });
           } else if (p.action === 'experiment.merge') {
@@ -679,33 +336,30 @@ export function register(program) {
               const r = await fetch(`${client.appsUrl}/api/apps/${opts.app}/experiments/${opts.name}/merge`, {
                 method: 'POST', headers: client.headers
               });
-              if (r.ok) { console.log(`  ✅ Merged to production!`); passed++; }
+              if (r.ok) { console.log('  ✅ Merged to production!'); passed++; }
               else { console.log(`  ❌ Merge failed: ${r.status}`); failed++; }
             });
           } else if (p.action === 'doctor.check') {
             console.log(`Step ${p.step}: 🟧 Doctor validation`);
-            console.log(`  → Run: zea doctor check venture`);
-            console.log(`  → (Skipped in auto mode — run manually for now)`);
+            console.log('  → Run: zea doctor check venture');
+            console.log('  → (Skipped in auto mode — run manually for now)');
             skipped++;
           } else {
             console.log(`Step ${p.step}: ${p.lego} ${p.desc}`);
             console.log(`  → CLI: ${p.cli}`);
-            console.log(`  → (Skipped — requires coding agent or manual CLI)`);
+            console.log('  → (Skipped — requires coding agent or manual CLI)');
             skipped++;
           }
         }
 
         console.log(`\n═══ Result: ${passed} passed, ${skipped} skipped, ${failed} failed ═══`);
         if (failed > 0) console.log('Discard experiment: zea experiment discard --app ' + opts.app + ' --name ' + opts.name);
-
-      } catch (e) {
-        console.error('Error:', e.message);
-      }
+      } catch (e) { console.error('Error:', e.message); }
     });
 
-  agentCmd.command("status")
-    .description("Show agent status: client, maintenance, coach, quality, all")
-    .argument("[agent]", "agent to check", "all")
+  agentCmd.command('status')
+    .description('Show agent status: client, maintenance, coach, quality, all')
+    .argument('[agent]', 'agent to check', 'all')
     .action(async (agent) => {
       console.log(execSync(`bash ~/.zea/scripts/agent_dashboard.sh ${agent}`, { encoding: 'utf8' }));
     });
