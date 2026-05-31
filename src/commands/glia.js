@@ -284,6 +284,9 @@ async function wsChat(client, sessionId, message, options) {
     await joinChannel(ws, 'session', sessionId);
 
     const tools = options.tools ? options.tools.split(',').map(s => s.trim()) : [];
+    const runPayload = { message, tools };
+    if (client.deepseekKey) runPayload.api_key = client.deepseekKey;
+    let streamedContent = '';
 
     const done = await new Promise((resolve) => {
       const handler = (data) => {
@@ -297,6 +300,7 @@ async function wsChat(client, sessionId, message, options) {
               process.stdout.write(chalk.gray(payload.content));
               break;
             case 'message_delta':
+              streamedContent += (payload.content || '');
               process.stdout.write(payload.content);
               break;
             case 'tool_call':
@@ -307,8 +311,13 @@ async function wsChat(client, sessionId, message, options) {
               break;
             case 'done':
               ws.removeListener('message', handler);
-              if (payload.text) console.log('\n' + chalk.green(payload.text));
-              else console.log('');
+              if (payload.text && payload.text !== streamedContent) {
+                console.log('\n' + chalk.green(payload.text));
+              } else if (!streamedContent && payload.text) {
+                console.log(chalk.green(payload.text));
+              } else {
+                console.log('');
+              }
               resolve();
               break;
             case 'error':
@@ -321,7 +330,7 @@ async function wsChat(client, sessionId, message, options) {
       };
 
       ws.on('message', handler);
-      sendWS(ws, `session:${sessionId}`, 'run', { message, tools });
+      sendWS(ws, `session:${sessionId}`, 'run', runPayload);
     });
 
     await done;
@@ -395,7 +404,10 @@ async function wsInteractive(client, sessionId, options) {
       };
 
       ws.on('message', handler);
-      sendWS(ws, `session:${sessionId}`, 'run', { message: text, tools });
+
+      const runPayload = { message: text, tools };
+      if (client.deepseekKey) runPayload.api_key = client.deepseekKey;
+      sendWS(ws, `session:${sessionId}`, 'run', runPayload);
     };
 
     rl.on('line', (line) => {

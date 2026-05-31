@@ -66,10 +66,13 @@ export async function getClient() {
   const gliaUrl = process.env.ZEA_GLIA_URL || config.gliaUrl || 'http://localhost:4002';
   const gliaWsUrl = process.env.ZEA_GLIA_WS_URL || config.gliaWsUrl || 'ws://localhost:4002/socket/websocket';
   const sensorUrl = process.env.ZEA_SENSOR_URL || config.sensorUrl || 'http://sensor.zea.localhost';
+  const deepseekKey = process.env.DEEPSEEK_API_KEY || config.deepseek_key || config.deepseekKey || null;
 
   if (!token) {
     throw new Error('Not authenticated. Please run "zea auth login" or set ZEA_PAT.');
   }
+
+  const isLocalhost = gliaUrl.includes('localhost') || gliaUrl.includes('127.0.0.1');
 
   return {
     apiUrl,
@@ -81,6 +84,8 @@ export async function getClient() {
     gliaWsUrl,
     sensorUrl,
     token,
+    deepseekKey,
+    isLocalhost,
     activeOrgId,
     headers: {
       'Authorization': `Bearer ${token}`,

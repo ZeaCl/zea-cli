@@ -9,6 +9,7 @@ import fs from 'fs/promises';
 import os from 'os';
 
 import { loadConfig, saveConfig, getClient } from './client.js';
+import zeaFetch from './lib/http.js';
 import { register as registerAuth } from './commands/auth.js';
 import { register as registerOrg } from './commands/org.js';
 import { register as registerToken } from './commands/token.js';
@@ -46,7 +47,7 @@ const program = new Command();
 program
   .name('zea')
   .description('ZEA Platform Agent Skill CLI')
-  .version('1.0.0');
+    .version('1.1.0');
 
 registerAuth(program);
 registerOrg(program);
@@ -275,7 +276,7 @@ registerXlsx(program);program.command('mcp')
         try {
           switch (name) {
             case 'list_organizations': {
-              const response = await fetch(`${client.apiUrl}/oauth/userinfo`, { headers: client.headers });
+              const response = await zeaFetch(`${client.apiUrl}/oauth/userinfo`, { headers: client.headers });
               if (!response.ok) throw new Error(`HTTP error ${response.status}`);
               const result = await response.json();
               return {
@@ -284,7 +285,7 @@ registerXlsx(program);program.command('mcp')
             }
             case 'switch_organization': {
               const target = args.org_id_or_slug;
-              const response = await fetch(`${client.apiUrl}/oauth/userinfo`, { headers: client.headers });
+              const response = await zeaFetch(`${client.apiUrl}/oauth/userinfo`, { headers: client.headers });
               if (!response.ok) throw new Error(`HTTP error ${response.status}`);
 
               const info = await response.json();
@@ -303,7 +304,7 @@ registerXlsx(program);program.command('mcp')
               };
             }
             case 'create_organization': {
-              const response = await fetch(`${client.apiUrl}/api/organizations`, {
+              const response = await zeaFetch(`${client.apiUrl}/api/organizations`, {
                 method: 'POST',
                 headers: client.headers,
                 body: JSON.stringify({
@@ -322,7 +323,7 @@ registerXlsx(program);program.command('mcp')
               };
             }
             case 'list_tokens': {
-              const response = await fetch(`${client.apiUrl}/api/personal-access-tokens`, { headers: client.headers });
+              const response = await zeaFetch(`${client.apiUrl}/api/personal-access-tokens`, { headers: client.headers });
               if (!response.ok) throw new Error(`HTTP error ${response.status}`);
               const result = await response.json();
               const pats = (result.data || []).filter(p => !client.activeOrgId || p.organization_id === client.activeOrgId);
@@ -331,7 +332,7 @@ registerXlsx(program);program.command('mcp')
               };
             }
             case 'create_token': {
-              const response = await fetch(`${client.apiUrl}/api/personal-access-tokens`, {
+              const response = await zeaFetch(`${client.apiUrl}/api/personal-access-tokens`, {
                 method: 'POST',
                 headers: client.headers,
                 body: JSON.stringify({ name: args.name, organization_id: client.activeOrgId })
@@ -343,7 +344,7 @@ registerXlsx(program);program.command('mcp')
               };
             }
             case 'revoke_token': {
-              const response = await fetch(`${client.apiUrl}/api/personal-access-tokens/${args.token_id}`, {
+              const response = await zeaFetch(`${client.apiUrl}/api/personal-access-tokens/${args.token_id}`, {
                 method: 'DELETE',
                 headers: client.headers
               });
@@ -354,14 +355,14 @@ registerXlsx(program);program.command('mcp')
             }
             case 'add_member': {
               const orgSlug = args.org_slug;
-              const userinfoResp = await fetch(`${client.apiUrl}/oauth/userinfo`, { headers: client.headers });
+              const userinfoResp = await zeaFetch(`${client.apiUrl}/oauth/userinfo`, { headers: client.headers });
               if (!userinfoResp.ok) throw new Error(`HTTP error ${userinfoResp.status}`);
               const info = await userinfoResp.json();
               const orgs = info.organizations || [];
               const org = orgs.find(o => o.id === orgSlug || o.slug === orgSlug);
               if (!org) throw new Error(`Organization '${orgSlug}' not found.`);
 
-              const response = await fetch(`${client.apiUrl}/api/organizations/${org.id}/members`, {
+              const response = await zeaFetch(`${client.apiUrl}/api/organizations/${org.id}/members`, {
                 method: 'POST',
                 headers: client.headers,
                 body: JSON.stringify({ email: args.email, role: args.role })
@@ -377,14 +378,14 @@ registerXlsx(program);program.command('mcp')
             }
             case 'remove_member': {
               const orgSlug = args.org_slug;
-              const userinfoResp = await fetch(`${client.apiUrl}/oauth/userinfo`, { headers: client.headers });
+              const userinfoResp = await zeaFetch(`${client.apiUrl}/oauth/userinfo`, { headers: client.headers });
               if (!userinfoResp.ok) throw new Error(`HTTP error ${userinfoResp.status}`);
               const info = await userinfoResp.json();
               const orgs = info.organizations || [];
               const org = orgs.find(o => o.id === orgSlug || o.slug === orgSlug);
               if (!org) throw new Error(`Organization '${orgSlug}' not found.`);
 
-              const response = await fetch(`${client.apiUrl}/api/organizations/${org.id}/members/${args.user_id}`, {
+              const response = await zeaFetch(`${client.apiUrl}/api/organizations/${org.id}/members/${args.user_id}`, {
                 method: 'DELETE',
                 headers: client.headers
               });
@@ -398,14 +399,14 @@ registerXlsx(program);program.command('mcp')
             }
             case 'list_members': {
               const orgSlug = args.org_slug;
-              const userinfoResp = await fetch(`${client.apiUrl}/oauth/userinfo`, { headers: client.headers });
+              const userinfoResp = await zeaFetch(`${client.apiUrl}/oauth/userinfo`, { headers: client.headers });
               if (!userinfoResp.ok) throw new Error(`HTTP error ${userinfoResp.status}`);
               const info = await userinfoResp.json();
               const orgs = info.organizations || [];
               const org = orgs.find(o => o.id === orgSlug || o.slug === orgSlug);
               if (!org) throw new Error(`Organization '${orgSlug}' not found.`);
 
-              const response = await fetch(`${client.apiUrl}/api/organizations/${org.id}`, { headers: client.headers });
+              const response = await zeaFetch(`${client.apiUrl}/api/organizations/${org.id}`, { headers: client.headers });
               if (!response.ok) throw new Error(`HTTP error ${response.status}`);
               const result = await response.json();
               return {
@@ -433,7 +434,7 @@ registerXlsx(program);program.command('mcp')
               if (args.source) params.set('source', args.source);
               if (args.status) params.set('status', args.status);
               if (args.limit) params.set('limit', args.limit.toString());
-              const response = await fetch(`${client.sensorUrl}/api/sensor/events?${params}`, { headers: client.headers });
+              const response = await zeaFetch(`${client.sensorUrl}/api/sensor/events?${params}`, { headers: client.headers });
               if (!response.ok) throw new Error(`HTTP error ${response.status}`);
               const result = await response.json();
               return {
@@ -441,7 +442,7 @@ registerXlsx(program);program.command('mcp')
               };
             }
             case 'sensor_get_event': {
-              const response = await fetch(`${client.sensorUrl}/api/sensor/events/${args.event_id}`, { headers: client.headers });
+              const response = await zeaFetch(`${client.sensorUrl}/api/sensor/events/${args.event_id}`, { headers: client.headers });
               if (!response.ok) throw new Error(`HTTP error ${response.status}`);
               const result = await response.json();
               return {
@@ -449,7 +450,7 @@ registerXlsx(program);program.command('mcp')
               };
             }
             case 'sensor_analyze_event': {
-              const response = await fetch(`${client.sensorUrl}/api/sensor/analyze/${args.event_id}`, {
+              const response = await zeaFetch(`${client.sensorUrl}/api/sensor/analyze/${args.event_id}`, {
                 method: 'POST',
                 headers: { ...client.headers, 'Content-Type': 'application/json' }
               });
@@ -485,7 +486,7 @@ registerXlsx(program);program.command('mcp')
               };
             }
             case 'glia_list_agents': {
-              const response = await fetch(`${client.gliaUrl}/api/agents`, { headers: client.headers });
+              const response = await zeaFetch(`${client.gliaUrl}/api/agents`, { headers: client.headers });
               if (!response.ok) throw new Error(`HTTP error ${response.status}`);
               const result = await response.json();
               return {

@@ -13,11 +13,11 @@ fi
 
 echo "   node $(node -v)"
 
-# 1. CLI (zea + glia)
+# 1. Install CLI
 echo "   📦 Instalando CLI..."
-npm install -g github:ZeaCl/zea-agent-skill 2>/dev/null && echo "   ✅ zea + glia instalados" || echo "   ⚠️  npm install falló, probá: npm install -g github:ZeaCl/zea-agent-skill"
+npm install -g github:ZeaCl/zea-agent-skill 2>/dev/null && echo "   ✅ zea instalado" || echo "   ⚠️  npm install falló, probá: npm install -g github:ZeaCl/zea-agent-skill"
 
-# 2. Agent skills (si npx skills está disponible)
+# 2. Agent skills
 if command -v npx &> /dev/null; then
   echo "   🧠 Instalando skills..."
   npx skills add ZeaCl/zea-agent-skill --yes --global 2>/dev/null && \
@@ -27,12 +27,33 @@ else
   echo "   ⚠️  npx no disponible — skills no instaladas"
 fi
 
+# 3. Configure API keys
+echo ""
+echo "   ═══ Configuración ═══"
+echo ""
+
+read -p "   DeepSeek API Key (opcional, para Glia agent): " DS_KEY
+if [ -n "$DS_KEY" ]; then
+  zea config set deepseek_key "$DS_KEY" 2>/dev/null && echo "   ✅ DeepSeek API Key configurada" || echo "   ⚠️  No se pudo guardar (probá: zea config set deepseek_key <key>)"
+fi
+
+read -p "   Glia URL [http://localhost:4002]: " GLIA_URL
+GLIA_URL=${GLIA_URL:-http://localhost:4002}
+zea config set gliaUrl "$GLIA_URL" 2>/dev/null && echo "   ✅ Glia URL: $GLIA_URL" || echo "   ⚠️  No se pudo guardar"
+
 echo ""
 echo "   ═══ Instalación completa ═══"
 echo ""
 echo "   Probalo:"
 echo ""
-echo "     glia '¿Cuántos fondos hay?'"
+echo "     zea glia chat '¿Cuántos fondos hay en Venture?'"
+echo "     zea glia console"
+echo "     zea doctor check glia"
+echo ""
+echo "   Configuración adicional:"
+echo ""
+echo "     zea config set deepseek_key <key>"
+echo "     zea config list"
 echo ""
 echo "   Más info: https://github.com/ZeaCl/zea-agent-skill"
 echo ""
