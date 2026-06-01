@@ -7,13 +7,25 @@ description: "Crear y gestionar apps en ZEA Platform: registrar, ver manifiesto,
 
 Una app ZEA se define por su **manifest** (JSON). Contiene estados (pantallas), intents (navegación), design system (colores) y shell (sidebar, chat).
 
+## Requisito previo: autenticación
+
+Antes de usar cualquier comando, autenticate **una vez**:
+
+```bash
+zea auth login
+```
+
+Esto abre el navegador, hacés login OAuth2 contra Thalamus, y el JWT se guarda en `~/.config/zea/config.json`. Todos los comandos `zea app` lo usan automáticamente.
+
+Si un comando devuelve `401 Unauthorized`, el token expiró. Volvé a ejecutar `zea auth login`.
+
 ## Comandos
 
 ```bash
 # Listar apps registradas
 zea app list
 
-# Ver manifiesto completo
+# Ver manifiesto completo de una app
 zea app show <app_id>
 
 # Registrar app desde archivo JSON/YAML
@@ -30,8 +42,8 @@ zea app register <manifest.json>
   "status": "active",
   "version": "1.0.0",
   "states": {
-    "dashboard": { "type": "Container", "children": [...] },
-    "form": { "type": "Container", "children": [...] }
+    "dashboard": { "type": "Container", "children": [] },
+    "form": { "type": "Container", "children": [] }
   },
   "intent_routing": {
     "back_to_dashboard": { "type": "state_transition", "target_state": "dashboard" }
@@ -59,107 +71,100 @@ zea app register <manifest.json>
 ```
 1. EXPLORAR: zea sdui manifest <app_id> — ver estado actual
 2. EXPERIMENT: zea experiment create --app <app_id> --name <nombre>
-   → Crea un clone de la app: <app_id>__exp_<nombre>
-3. MODIFICAR: PUT /api/apps/<app_id>/experiments/<nombre>
-   Body: { "manifest": { ...manifest modificado... } }
-4. PREVIEW: /app?app_id=<app_id>__exp_<nombre>
+   → Crea un clone seguro: <app_id>__exp_<nombre>
+3. MODIFICAR: zea app register <manifest.json> — subir cambios al experimento
+   (el CLI detecta el experimento activo y actualiza el clone, no el padre)
+4. PREVIEW: la URL de preview es:
+   http://localhost:4007/app?app_id=<app_id>__exp_<nombre>
+   (o http://apps.zea.localhost/app?app_id=... con Caddy/Docker)
 5. ESPERAR: no mergear hasta aprobación humana explícita
 6. MERGE: zea experiment merge --app <app_id> --name <nombre>
    (solo si el humano dice "aprobado", "mergeá", "dale")
 7. DESCARTAR: zea experiment discard (si el humano dice "no")
 ```
 
-## Manifest canónico
+## Experiments
 
-Cada app debe tener su manifest guardado como archivo:
-
-```
-~/.zea/platform/apps/<app_id>/manifest.json
-```
-
-Este archivo es el **source of truth**. Si la DB se pierde, se registra de nuevo con:
 ```bash
-zea app register ~/.zea/platform/apps/<app_id>/manifest.json
+# Crear experimento (branch seguro)
+zea experiment create --app <app_id> --name <nombre>
+
+# Listar experiments de una app
+zea experiment list --app <app_id>
+
+# Merge a producción
+zea experiment merge --app <app_id> --name <nombre>
+
+# Descartar experimento
+zea experiment discard --app <app_id> --name <nombre>
 ```
 
 ## Error recovery
 
-⚠️ CRÍTICO: Si algo falla, NO investigues por tu cuenta.
-NO busques código fuente. NO pruebes otros comandos. NO uses docker, ps, o bash.
-Derivar a maintenance es tu ÚNICA opción.
+Si un comando falla:
 
-Si cualquier operación falla (HTTP 500, error, etc.):
+1. **401 Unauthorized** → el token JWT expiró. Ejecutá `zea auth login`.
+2. **Connection refused** → el servicio zea_apps no está corriendo. Verificá con `zea doctor check api`.
+3. **422 Unprocessable** → el manifest tiene errores de validación. Revisá el JSON contra la estructura documentada arriba.
+4. **500 Internal Error** → error del servidor. Ejecutá `zea doctor run` para diagnosticar.
 
-### 1. PARÁ inmediatamente
-No sigas intentando. No explores. No improvisar.
-
-### 2. DERIVÁ a maintenance agent
-Creá una sesión en opencode-maintenance:4097 con este prompt exacto:
-```
-Issue: "app list failed with: {error_message}". 
-Skill: maintenance.
-App: my_app.
-Acción: follow maintenance protocol — diagnose, fix, verify.
-```
-
-### 3. ESPERÁ respuesta
-El maintenance agent responde con el resultado del fix.
-Si maintenance reporta "fixed" → reintentá la operación original.
-Si maintenance reporta "failed" → informá al usuario.
-
-### 4. Si maintenance no está disponible
-Ejecutá `zea doctor run` y reportá los resultados al usuario.
+Si el error persiste, reportá al usuario:
+- Qué comando falló
+- El código de error HTTP
+- El mensaje de error exacto
 
 ## Ver la app
 
-Cuando el usuario pida "ver la app", "mostrame la app", "abrir la app", seguí este flujo:
+Cuando el usuario pida "ver la app", "mostrame la app":
 
-### 1. Saber qué app usar
+### 1. Descubrir qué apps existen
 ```bash
-# Listar apps disponibles
 zea app list
 ```
 - Si hay solo una → usarla automáticamente
-- Si hay varias → mostrar la lista y preguntar: "¿Cuál app querés ver?"
-- La app actualmente activa es `my_app`
+- Si hay varias → mostrar la lista y preguntar cuál
 
-### 2. Verificar que la app funciona
+### 2. Verificar salud
 ```bash
-zea doctor run
+zea doctor check api
 ```
 
-### 3. Si el doctor falla
-- Reportá qué capa falló (api, auth, venture, skills, etc.)
-- Si el fallo es crítico: revisar logs del servicio con `docker logs`
-- Si no se puede reparar: explicar al usuario qué servicio no responde
-
-### 4. Si todo OK
-Mostrar la URL:
+### 3. Mostrar URL
 ```
-http://apps.zea.localhost/
+http://localhost:4007/app?app_id=<app_id>
 ```
 
-⚠️  NUNCA uses estas URLs internas (son para Docker, no para el usuario):
-  ❌ http://localhost:4006/app?app_id=...
-  ❌ http://sdui-engine:4006/...
-  ❌ http://localhost:4006/...
+O si la plataforma corre con Docker/Caddy:
+```
+http://apps.zea.localhost/app?app_id=<app_id>
+```
 
-La URL pública SIEMPRE es: http://apps.zea.localhost/
+## API REST (uso avanzado)
 
-### 5. Instrucciones para el usuario
-- Abrí la URL en tu navegador
-- Login: `c@zea.cl` / `demo1234`
-- Vas a ver el Dashboard con sidebar, KPI cards y chat del asistente
+Para integración programática sin CLI:
 
-## Ver preview de experiment
-
-Cuando el usuario pida "ver el experimento X":
 ```bash
-# 1. Verificar que existe
-zea experiment list --app <app_id>
+# Listar apps
+curl http://localhost:4007/api/apps \
+  -H "Authorization: Bearer $ZEA_TOKEN"
 
-# 2. URL de preview
-http://apps.zea.localhost/app?app_id=<app_id>__exp_<nombre>
+# Obtener manifiesto
+curl http://localhost:4007/api/apps/<app_id>/manifest \
+  -H "Authorization: Bearer $ZEA_TOKEN"
 
-# 3. IMPORTANTE: no mergear hasta aprobación humana explícita
+# Registrar/actualizar app
+curl -X POST http://localhost:4007/api/apps \
+  -H "Authorization: Bearer $ZEA_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d @manifest.json
 ```
+
+## MCP Server
+
+zea_apps expone un servidor MCP (Model Context Protocol) para agentes:
+
+```bash
+cd zea_apps && mix zea_apps.mcp
+```
+
+Tools disponibles: `validate_app`, `register_app`, `list_apps`, `get_app_details`, `discover_domain_skills`.
