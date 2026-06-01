@@ -560,17 +560,61 @@ print(json.dumps(result))
 "`, { encoding: 'utf8', timeout: 15000 }).toString()
         );
 
-        const entityMap = { funds: '/gp/funds', investors: '/gp/investors' };
+        const entityMap = { funds: '/gp/funds', investors: '/gp/investors', commitments: '/gp/commitments', capital_calls: '/gp/capital-calls', payments: null };
         const headers = { ...client.headers, 'Content-Type': 'application/json' };
         if (client.activeOrgId) headers['X-Zea-Org-Id'] = client.activeOrgId;
 
         let created = {};
+        // Cache: fund name → ID, investor email → ID, capital call (fund+number) → ID
+        let fundCache = {}, investorCache = {}, callCache = {};
+
+        // Pre-load caches
+        try {
+          const fundsResp = await zeaFetch(`${client.ventureUrl}/gp/funds`, { headers: {...headers}, method: 'GET' });
+          if (fundsResp.ok) {
+            const fundsData = await fundsResp.json();
+            for (const f of (fundsData.items || fundsData.funds || [])) {
+              fundCache[f.name?.toLowerCase()] = f.id;
+            }
+          }
+        } catch {}
+        try {
+          const invResp = await zeaFetch(`${client.ventureUrl}/gp/investors`, { headers: {...headers}, method: 'GET' });
+          if (invResp.ok) {
+            const invData = await invResp.json();
+            for (const i of (invData.items || invData.investors || [])) {
+              if (i.email) investorCache[i.email.toLowerCase()] = i.id;
+            }
+          }
+        } catch {}
+        try {
+          const callsResp = await zeaFetch(`${client.ventureUrl}/gp/capital-calls`, { headers: {...headers}, method: 'GET' });
+          if (callsResp.ok) {
+            const callsData = await callsResp.json();
+            for (const c of (callsData.items || callsData.calls || callsData.capital_calls || [])) {
+              const fundName = Object.keys(fundCache).find(k => fundCache[k] === c.fund_id);
+              if (fundName) callCache[`${fundName}_${c.call_number}`] = c.id;
+            }
+          }
+        } catch {}
 
         for (const [sheet, rows] of Object.entries(sheets)) {
-          const isFunds = /fund/i.test(sheet);
-          const isLps = /investor|lp/i.test(sheet);
-          const entity = isFunds ? 'funds' : isLps ? 'investors' : null;
-          if (!entity) { console.log(`  ⚠️  Unknown: ${sheet}`); continue; }
+          const s = sheet.toLowerCase();
+          const isFunds = /fund/i.test(s);
+          const isLps = /investor|lp/i.test(s);
+          const isCommitments = /commit/i.test(s);
+          const isCapitalCalls = /capital.call|capital_call/i.test(s);
+          const isPayments = /payment/i.test(s);
+          
+          let entity = isFunds ? 'funds' : isLps ? 'investors' : isCommitments ? 'commitments' : isCapitalCalls ? 'capital_calls' : isPayments ? 'payments' : null;
+          
+          // Payments: endpoint pendiente
+          if (entity === 'payments') {
+            console.log(`  ⚠️  Payments: endpoint no disponible aún (${rows.length} filas)`);
+            continue;
+          }
+          
+          if (!entity) { console.log(`  ⚠️  No soportado: ${sheet}`); continue; }
 
           console.log(`${entity}: ${rows.length} rows`);
 
@@ -578,12 +622,38 @@ print(json.dumps(result))
             try {
               if (entity === 'funds') {
                 const body = { name: row.name || row.Name, type: row.type || 'VENTURE_CAPITAL', total_size: parseInt(row.total_size || 0) * 100, currency: row.currency || 'USD', status: row.status || 'DRAFT' };
-                const r = await zeaFetch(`${client.ventureUrl}${entityMap[entity]}`, { method: 'POST', headers, body: JSON.stringify(body) });
-                if (r.ok) { created[entity] = (created[entity] || 0) + 1; }
+                const r = await zeaFetch(`${client.ventureUrl}${entityMap.funds}`, { method: 'POST', headers, body: JSON.stringify(body) });
+                if (r.ok) { created[entity] = (created[entity] || 0) + 1; fundCache[row.name?.toLowerCase()] = (await r.json()).id; }
               } else if (entity === 'investors') {
                 const body = { name: row.name || row.Name, email: row.email || row.Email, investor_type: row.investor_type || row.investorType || 'INDIVIDUAL', is_qualified_investor: row.is_qualified === 'true' || row.is_qualified === true };
-                const r = await zeaFetch(`${client.ventureUrl}${entityMap[entity]}`, { method: 'POST', headers, body: JSON.stringify(body) });
-                if (r.ok) { created[entity] = (created[entity] || 0) + 1; }
+                const r = await zeaFetch(`${client.ventureUrl}${entityMap.investors}`, { method: 'POST', headers, body: JSON.stringify(body) });
+                if (r.ok) { created[entity] = (created[entity] || 0) + 1; if (body.email) investorCache[body.email.toLowerCase()] = (await r.json()).id; }
+              } else if (entity === 'commitments') {
+                const fundName = (row.fund_name || row.fund || '').toLowerCase();
+                const investorEmail = (row.investor_email || row.email || row.lp_email || '').toLowerCase();
+                const fundId = fundCache[fundName];
+                const investorId = investorCache[investorEmail];
+                if (!fundId || !investorId) {
+                  if (!fundId) console.log(`    ⚠️  Fund not found: ${fundName}`);
+                  if (!investorId) console.log(`    ⚠️  Investor not found: ${investorEmail}`);
+                  continue;
+                }
+                const amount = parseInt(row.amount || 0);
+                const investorUrl = `${client.ventureUrl}/gp/investors/${investorId}/commitments`;
+                const body = { fund_id: fundId, amount: amount * 100, class_name: row.class_name || row.class || null };
+                const r = await zeaFetch(investorUrl, { method: 'POST', headers, body: JSON.stringify(body) });
+                if (r.ok) created[entity] = (created[entity] || 0) + 1;
+              } else if (entity === 'capital_calls') {
+                const fundName = (row.fund_name || row.fund || '').toLowerCase();
+                const fundId = fundCache[fundName];
+                if (!fundId) { console.log(`    ⚠️  Fund not found: ${fundName}`); continue; }
+                const body = { fund_id: fundId, total_amount: parseInt(row.total_amount || row.amount || 0) * 100, call_number: parseInt(row.call_number || row.number || 1), issue_date: row.issue_date || row.date || new Date().toISOString().split('T')[0], due_date: row.due_date || null, status: row.status || 'DRAFT' };
+                const r = await zeaFetch(`${client.ventureUrl}${entityMap.capital_calls}`, { method: 'POST', headers, body: JSON.stringify(body) });
+                if (r.ok) {
+                  created[entity] = (created[entity] || 0) + 1;
+                  const callData = await r.json();
+                  callCache[`${fundName}_${body.call_number}`] = callData.id || callData.data?.id;
+                }
               }
             } catch (e) { /* skip row errors */ }
           }
