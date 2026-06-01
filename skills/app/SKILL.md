@@ -5,6 +5,20 @@ description: "Crear y gestionar apps en ZEA Platform: registrar, ver manifiesto,
 
 # App — App Management
 
+## ⚠️ REGLA DE ORO: Siempre usar experiment
+
+**NUNCA modifiques el manifiesto directamente.** Cada cambio debe hacerse dentro de un experiment:
+
+```
+1. zea experiment create --app <app_id> --name "<desc>"
+2. Modificar el manifiesto del experiment
+3. Preview: glia open app <app_id>
+4. Esperar aprobación humana
+5. zea experiment merge o zea experiment discard
+```
+
+NUNCA hagas `POST /api/apps` con datos parciales. Si necesitás cambiar solo un campo (ej: design_system), primero obtené el manifiesto completo, mergeá tus cambios, y enviá el manifiesto COMPLETO.
+
 Una app ZEA se define por su **manifest** (JSON). Contiene estados (pantallas), intents (navegación), design system (colores) y shell (sidebar, chat).
 
 ## Requisito previo: autenticación
