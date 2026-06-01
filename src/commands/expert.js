@@ -17,7 +17,7 @@ import os from 'os';
 import { execSync } from 'child_process';
 import zeaFetch from '../lib/http.js';
 
-const EXPERTS_DIR = path.join(os.homedir(), '.zea', 'experts');
+const EXPERTS_DIR = process.env.ZEA_EXPERTS_DIR || path.join(os.homedir(), '.zea', 'experts');
 const DEEPSEEK_API = 'https://api.deepseek.com/v1/chat/completions';
 
 // Allowlists: what commands each expert can execute
