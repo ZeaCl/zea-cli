@@ -45,6 +45,8 @@ zea design update-design --app <app_id> --token colors.primary --value "#1a365d"
 
 ## Recuperar screens desde memoria
 
+**ANTES de tocar cualquier app, preguntarle al usuario cuál quiere modificar.** Usá `zea app list` para mostrar las apps disponibles. NUNCA asumas el app_id.
+
 Si una app perdió sus pantallas (por upsert parcial), recuperarlas desde `~/.zea/memory/apps/<app_id>/stitch.json`:
 
 1. Leer `~/.zea/memory/apps/<app_id>/stitch.json` con filesystem
