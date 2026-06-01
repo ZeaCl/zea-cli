@@ -11,13 +11,13 @@ Una app ZEA se define por su **manifest** (JSON). Contiene estados (pantallas), 
 
 ```bash
 # Listar apps registradas
-node /workspace/zea-cli/src/index.js app list
+zea app list
 
 # Ver manifiesto completo
-node /workspace/zea-cli/src/index.js app show <app_id>
+zea app show <app_id>
 
 # Registrar app desde archivo JSON/YAML
-node /workspace/zea-cli/src/index.js app register <manifest.json>
+zea app register <manifest.json>
 ```
 
 ## Estructura del manifest
@@ -108,7 +108,7 @@ Si maintenance reporta "fixed" → reintentá la operación original.
 Si maintenance reporta "failed" → informá al usuario.
 
 ### 4. Si maintenance no está disponible
-Ejecutá `doctor check` y reportá los resultados al usuario.
+Ejecutá `zea doctor run` y reportá los resultados al usuario.
 
 ## Ver la app
 
@@ -117,7 +117,7 @@ Cuando el usuario pida "ver la app", "mostrame la app", "abrir la app", seguí e
 ### 1. Saber qué app usar
 ```bash
 # Listar apps disponibles
-node /workspace/zea-cli/src/index.js app list
+zea app list
 ```
 - Si hay solo una → usarla automáticamente
 - Si hay varias → mostrar la lista y preguntar: "¿Cuál app querés ver?"
@@ -125,12 +125,12 @@ node /workspace/zea-cli/src/index.js app list
 
 ### 2. Verificar que la app funciona
 ```bash
-node /workspace/zea-cli/src/index.js doctor check
+zea doctor run
 ```
 
 ### 3. Si el doctor falla
 - Reportá qué capa falló (api, auth, venture, skills, etc.)
-- Si el fallo es crítico: `doctor check --fix`
+- Si el fallo es crítico: revisar logs del servicio con `docker logs`
 - Si no se puede reparar: explicar al usuario qué servicio no responde
 
 ### 4. Si todo OK
@@ -156,7 +156,7 @@ La URL pública SIEMPRE es: http://sudlich.zea.localhost/
 Cuando el usuario pida "ver el experimento X":
 ```bash
 # 1. Verificar que existe
-node /workspace/zea-cli/src/index.js experiment list --app <app_id>
+zea experiment list --app <app_id>
 
 # 2. URL de preview
 http://sudlich.zea.localhost/app?app_id=<app_id>__exp_<nombre>

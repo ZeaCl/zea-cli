@@ -1,53 +1,67 @@
 ---
 name: doctor
-description: "Diagnóstico de la plataforma ZEA. Verifica 7 capas: HTTP health, auth, venture data, skills sync, opencode, tools, chat E2E. Usar después de cada deploy."
+description: "Diagnóstico de la plataforma ZEA. Verifica 6 capas: HTTP health, auth, venture data, stitch, glia, tools. Usar después de cada deploy."
 ---
 
 # ZEA Doctor — Health Check
 
-## Comando
-```
-node /workspace/zea-cli/src/index.js doctor check
+## Comandos
+
+```bash
+# Diagnóstico completo (todas las capas)
+zea doctor run
+
+# Diagnóstico por capa específica
+zea doctor check <layer>
+
+# Diagnóstico completo de plataforma (con agentes y workflows)
+zea diagnose
 ```
 
 ## Capas
-1. **api** — HTTP health de todos los servicios
-2. **auth** — JWT valida + opencode session create
-3. **venture** — Fondos, capital calls, investors accesibles
-4. **skills** — Skills ZEA sincronizadas con opencode
-5. **opencode** — DeepSeek reachable + responde prompts
-6. **tools** — ZEA CLI disponible + ZEA_TOKEN válido
-7. **chat** — E2E smoke test (send prompt → get response)
+
+1. **api** — HTTP health de todos los servicios (venture, thalamus, stitch MCP)
+2. **auth** — JWT válido, token decode, expiración, Venture API autenticada
+3. **venture** — Fondos, capital calls, investors, dashboard accesibles
+4. **stitch** — Stitch MCP reachable, list_screens funciona (requiere STITCH_KEY)
+5. **glia** — Glia health endpoint, agents running, DeepSeek reachable
+6. **tools** — ZEA CLI disponible, ZEA_TOKEN válido, skills directory existe
 
 ## Uso
-```bash
-# Diagnóstico completo
-zea doctor check
 
-# Diagnóstico + reparación automática
-zea doctor check --fix
+```bash
+# Diagnóstico completo (recomendado después de cada deploy)
+zea doctor run
+
+# Capa específica
+zea doctor check venture
+zea doctor check glia
+zea doctor check auth
 ```
 
 ## Error recovery
 
-Si `doctor check` encuentra fallos en alguna capa:
+Si `zea doctor run` encuentra fallos:
 
-### 1. Buscar en error_patterns
+### 1. Verificar el servicio afectado
+- **api**: ¿Están corriendo los servicios Docker? `docker ps | grep zea`
+- **auth**: ¿Thalamus está corriendo? `curl http://auth.zea.localhost/.well-known/jwks.json`
+- **venture**: ¿venture-api está corriendo? `curl http://venture.zea.localhost/health`
+- **glia**: ¿Glia está corriendo? `curl http://glia.zea.localhost/api/health`
+- **stitch**: ¿STITCH_KEY está configurada? `echo $STITCH_KEY`
+- **tools**: ¿zea CLI instalado? `which zea`
+
+### 2. Reiniciar servicio
 ```bash
-node /workspace/zea-cli/src/index.js maintenance patterns
+docker compose -f docker-compose.local.yml up -d <service> --build
 ```
-- Si el error tiene un patrón conocido con confidence > 0.9 → auto-fix
-- Si confidence < 0.5 → derivar a maintenance agent
 
-### 2. Auto-fix (patrones estables)
-Si `error_patterns.json` tiene un fix para este error con confidence > 0.9:
-- Ejecutar el fix documentado
-- Verificar con `doctor check` de nuevo
-- Registrar resultado con `recordFixResult()`
+### 3. Verificar base de datos
+```bash
+docker exec zea_postgres_local psql -U postgres -c "\l"
+```
 
-### 3. Maintenance agent (errores nuevos o inestables)
-Si el patrón no existe o tiene confidence baja:
-- POST opencode-maintenance:4097/session con el detalle del error
-- El maintenance agent investiga, fixea y reporta
-- Si fixea → registrar patrón en error_patterns
-- Si no puede → reportar al usuario
+### 4. Revisar logs
+```bash
+docker logs zea_<service>_local --tail 50
+```

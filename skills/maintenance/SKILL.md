@@ -17,7 +17,7 @@ Cuando recibas un issue o detectes un error del sistema, seguí este protocolo.
 
 ### 2. DIAGNOSTICAR causa raíz
 ```bash
-node /workspace/zea-cli/src/index.js doctor check
+zea doctor run
 ```
 - Identificá qué capa falló (api, db, skills, etc.)
 - Buscá en logs: `docker logs <servicio> --tail 50`
@@ -34,7 +34,7 @@ node /workspace/zea-cli/src/index.js doctor check
 
 ### 5. VERIFICAR
 ```bash
-node /workspace/zea-cli/src/index.js doctor check
+zea doctor run
 ```
 - Si el fix funcionó → marcar como `fixed` y registrar en learnings
 - Si falló → marcar como `failed`, documentar por qué
@@ -47,7 +47,7 @@ node /workspace/zea-cli/src/index.js doctor check
 # Fix:
 docker exec zea_apps_local bin/zea_apps eval 'ZeaApps.Release.migrate()'
 # Verify:
-node /workspace/zea-cli/src/index.js app list
+zea app list
 ```
 
 ### service_down

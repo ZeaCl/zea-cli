@@ -8,14 +8,14 @@ description: "Server-Driven UI: ver manifiestos, estados, intents. Conectar sesi
 ## Comandos
 ```bash
 # Ver manifiesto de una app
-node /workspace/zea-cli/src/index.js sdui manifest sudlich_ventures
-node /workspace/zea-cli/src/index.js sdui manifest <app_id>
+zea sdui manifest sudlich_ventures
+zea sdui manifest <app_id>
 
 # Start session
-node /workspace/zea-cli/src/index.js sdui start <app_id>
+zea sdui start <app_id>
 
 # Dispatch intent
-node /workspace/zea-cli/src/index.js sdui dispatch <session_id> <action>
+zea sdui dispatch <session_id> <action>
 ```
 
 ## APIs internas

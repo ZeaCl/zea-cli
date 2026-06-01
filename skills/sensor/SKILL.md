@@ -8,20 +8,20 @@ description: "Captura y procesamiento de datos: transcribir audio (WhatsApp), an
 ## Comandos
 ```bash
 # Transcribir audio
-node /workspace/zea-cli/src/index.js sensor transcribe <files...> --app <app_id>
+zea sensor transcribe <files...> --app <app_id>
 
 # Listar eventos
-node /workspace/zea-cli/src/index.js sensor events --app <app_id> [--source whatsapp] [--status pending]
+zea sensor events --app <app_id> [--source whatsapp] [--status pending]
 
 # Ver estado de evento
-node /workspace/zea-cli/src/index.js sensor status <event_id> --app <app_id>
+zea sensor status <event_id> --app <app_id>
 
 # Analizar evento
-node /workspace/zea-cli/src/index.js sensor analyze <event_id> --app <app_id>
+zea sensor analyze <event_id> --app <app_id>
 
 # Escuchar y procesar automáticamente
-node /workspace/zea-cli/src/index.js sensor listen --app <app_id> [--auto-process]
+zea sensor listen --app <app_id> [--auto-process]
 
 # Generar reporte
-node /workspace/zea-cli/src/index.js sensor report <event_id> --app <app_id>
+zea sensor report <event_id> --app <app_id>
 ```

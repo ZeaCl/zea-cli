@@ -33,16 +33,16 @@ description: "Orquestador autónomo: planificar cambios, analizar requests, gene
 ## Comandos
 ```bash
 # Planificar
-node /workspace/zea-cli/src/index.js agent plan --app <app_id> --request "<descripción>"
+zea agent plan --app <app_id> --request "<descripción>"
 
 # Ejecutar plan (crea experiment + ejecuta pasos)
-node /workspace/zea-cli/src/index.js agent execute --app <app_id> --name <experiment> --auto
+zea agent execute --app <app_id> --name <experiment> --auto
 
 # Escanear app para detectar mejoras
-node /workspace/zea-cli/src/index.js agent scan --app <app_id>
+zea agent scan --app <app_id>
 
 # Mejorar automáticamente
-node /workspace/zea-cli/src/index.js agent improve --app <app_id> --auto
+zea agent improve --app <app_id> --auto
 ```
 
 ## 🧱 Lego Pieces
@@ -53,4 +53,4 @@ node /workspace/zea-cli/src/index.js agent improve --app <app_id> --auto
 | Fondos/investors | Venture | `zea venture fund list/create` |
 | Manifiesto/estados | SDUI | `zea sdui manifest` |
 | Seguridad | Experiment | `zea experiment create/merge/discard` |
-| Diagnóstico | Doctor | `zea doctor check` |
+| Diagnóstico | Doctor | `zea doctor run` |

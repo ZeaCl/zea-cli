@@ -8,23 +8,23 @@ description: "Gestión de fondos de inversión: listar, crear, transicionar. Cap
 ## Comandos
 ```bash
 # Fondos
-node /workspace/zea-cli/src/index.js venture fund list
-node /workspace/zea-cli/src/index.js venture fund create --name "X" --hard-cap 5000000 --currency USD
-node /workspace/zea-cli/src/index.js venture fund show <id>
-node /workspace/zea-cli/src/index.js venture fund transition <id> --status FUNDRAISING
+zea venture fund list
+zea venture fund create --name "X" --hard-cap 5000000 --currency USD
+zea venture fund show <id>
+zea venture fund transition <id> --status FUNDRAISING
 
 # Capital Calls
-node /workspace/zea-cli/src/index.js venture capital-call list
-node /workspace/zea-cli/src/index.js venture capital-call create --fund <id> --amount 1000000 --due-date 2026-12-31
-node /workspace/zea-cli/src/index.js venture capital-call send <id>
+zea venture capital-call list
+zea venture capital-call create --fund <id> --amount 1000000 --due-date 2026-12-31
+zea venture capital-call send <id>
 
 # Investors
-node /workspace/zea-cli/src/index.js venture investor list
-node /workspace/zea-cli/src/index.js venture investor create --name "X" --email "x@y.com"
-node /workspace/zea-cli/src/index.js venture investor add-commitment --investor <id> --fund <id> --amount 1000000
+zea venture investor list
+zea venture investor create --name "X" --email "x@y.com"
+zea venture investor add-commitment --investor <id> --fund <id> --amount 1000000
 
 # Dashboard
-node /workspace/zea-cli/src/index.js venture dashboard
+zea venture dashboard
 ```
 
 ## APIs internas

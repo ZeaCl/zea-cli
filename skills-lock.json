@@ -19,6 +19,12 @@
       "skillPath": "skills/design/SKILL.md",
       "computedHash": "pending"
     },
+    "glia": {
+      "source": "ZeaCl/zea-agent-skill",
+      "sourceType": "github",
+      "skillPath": "skills/glia/SKILL.md",
+      "computedHash": "pending"
+    },
     "doctor": {
       "source": "ZeaCl/zea-agent-skill",
       "sourceType": "github",

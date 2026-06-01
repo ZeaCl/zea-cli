@@ -8,16 +8,16 @@ description: "Diseño de apps ZEA: importar screens desde Stitch, cambiar colore
 ## Comandos
 ```bash
 # Ver estado de diseño
-node /workspace/zea-cli/src/index.js design status --app <app_id>
+zea design status --app <app_id>
 
 # Importar screen desde Stitch
-node /workspace/zea-cli/src/index.js design import-screen --app <app_id> --screen-id <sid> --state <name>
+zea design import-screen --app <app_id> --screen-id <sid> --state <name>
 
 # Listar screens disponibles
-node /workspace/zea-cli/src/index.js design list-screens --app <app_id>
+zea design list-screens --app <app_id>
 
 # Cambiar design system (colores, fuentes)
-node /workspace/zea-cli/src/index.js design update-design --app <app_id> --token <token> --value <json>
+zea design update-design --app <app_id> --token <token> --value <json>
 ```
 
 ## Flujo típico
