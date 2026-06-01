@@ -128,7 +128,17 @@ zea app list
 zea doctor check api
 ```
 
-### 3. Mostrar URL
+### 3. Abrir la app en el navegador
+
+Si el usuario lo pide, ejecutar:
+
+```bash
+glia open app <app_id>
+```
+
+Este comando abre el navegador local del usuario automáticamente.
+
+URL si el usuario quiere abrir manualmente:
 ```
 https://apps.zea.cl/app?app_id=<app_id>
 ```
