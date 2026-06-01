@@ -29,9 +29,9 @@ zea venture dashboard
 
 ## APIs internas
 ```bash
-curl http://venture-api:4081/gp/funds -H "Authorization: Bearer $ZEA_TOKEN" -H "x-zea-org-id: $ZEA_ORG_ID"
-curl http://venture-api:4081/gp/capital-calls -H "Authorization: Bearer $ZEA_TOKEN" -H "x-zea-org-id: $ZEA_ORG_ID"
-curl http://venture-api:4081/gp/investors -H "Authorization: Bearer $ZEA_TOKEN" -H "x-zea-org-id: $ZEA_ORG_ID"
+curl https://venture.zea.cl/gp/funds -H "Authorization: Bearer $ZEA_TOKEN" -H "x-zea-org-id: $ZEA_ORG_ID"
+curl https://venture.zea.cl/gp/capital-calls -H "Authorization: Bearer $ZEA_TOKEN" -H "x-zea-org-id: $ZEA_ORG_ID"
+curl https://venture.zea.cl/gp/investors -H "Authorization: Bearer $ZEA_TOKEN" -H "x-zea-org-id: $ZEA_ORG_ID"
 ```
 
 ## Error recovery

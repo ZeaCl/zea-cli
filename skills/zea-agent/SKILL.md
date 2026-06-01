@@ -62,16 +62,16 @@ Para integración programática (desde otro servicio, un frontend, o un SDK):
 ```bash
 # Iniciar el gateway
 zea server start
-# → API REST en http://localhost:4000
-# → WebSocket en ws://localhost:4091
+# → API REST en https://api.zea.cl
+# → WebSocket en wss://api.zea.cl/ws
 
 # Llamar al orquestador via API
-curl -X POST http://localhost:4000/v1/orchestrate \
+curl -X POST https://api.zea.cl/v1/orchestrate \
   -H "Content-Type: application/json" \
   -d '{"message":"Listá los fondos registrados","domain":"venture"}'
 
 # Health check
-curl http://localhost:4000/health
+curl https://api.zea.cl/health
 ```
 
 ## Comandos por área
@@ -164,8 +164,8 @@ zea branch merge --name feat-X --yes
 ### Visual Host (screenshots vía Playwright)
 ```bash
 docker compose up -d visual-host
-curl -X POST localhost:4090/open -d '{"url":"http://sdui-engine:4006/app?app_id=my_app"}'
-curl -X POST localhost:4090/screenshot -d '{"filename":"dashboard.png"}'
+curl -X POST visual.zea.cl/open -d '{"url":"https://sdui.zea.cl/app?app_id=my_app"}'
+curl -X POST visual.zea.cl/screenshot -d '{"filename":"dashboard.png"}'
 ```
 
 ## 📱 Formato ---ACTIONS--- (Telegram inline keyboard)

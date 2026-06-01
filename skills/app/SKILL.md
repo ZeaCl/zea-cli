@@ -75,8 +75,7 @@ zea app register <manifest.json>
 3. MODIFICAR: zea app register <manifest.json> — subir cambios al experimento
    (el CLI detecta el experimento activo y actualiza el clone, no el padre)
 4. PREVIEW: la URL de preview es:
-   http://localhost:4007/app?app_id=<app_id>__exp_<nombre>
-   (o http://apps.zea.localhost/app?app_id=... con Caddy/Docker)
+   https://apps.zea.cl/app?app_id=<app_id>__exp_<nombre>
 5. ESPERAR: no mergear hasta aprobación humana explícita
 6. MERGE: zea experiment merge --app <app_id> --name <nombre>
    (solo si el humano dice "aprobado", "mergeá", "dale")
@@ -131,12 +130,7 @@ zea doctor check api
 
 ### 3. Mostrar URL
 ```
-http://localhost:4007/app?app_id=<app_id>
-```
-
-O si la plataforma corre con Docker/Caddy:
-```
-http://apps.zea.localhost/app?app_id=<app_id>
+https://apps.zea.cl/app?app_id=<app_id>
 ```
 
 ## API REST (uso avanzado)
@@ -145,15 +139,15 @@ Para integración programática sin CLI:
 
 ```bash
 # Listar apps
-curl http://localhost:4007/api/apps \
+curl https://apps.zea.cl/api/apps \
   -H "Authorization: Bearer $ZEA_TOKEN"
 
 # Obtener manifiesto
-curl http://localhost:4007/api/apps/<app_id>/manifest \
+curl https://apps.zea.cl/api/apps/<app_id>/manifest \
   -H "Authorization: Bearer $ZEA_TOKEN"
 
 # Registrar/actualizar app
-curl -X POST http://localhost:4007/api/apps \
+curl -X POST https://apps.zea.cl/api/apps \
   -H "Authorization: Bearer $ZEA_TOKEN" \
   -H "Content-Type: application/json" \
   -d @manifest.json

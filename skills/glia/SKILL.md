@@ -63,7 +63,7 @@ Orquestación multi-agente para tareas complejas.
 
 ```bash
 glia config set deepseek_key sk-...
-glia config set gliaUrl http://localhost:4001
+glia config set gliaUrl https://glia.zea.cl
 glia config list
 ```
 
@@ -97,7 +97,7 @@ Para respuestas especializadas, usar `--skill <name>`:
 
 ## Protocolo WebSocket
 
-Glia se conecta a `ws://localhost:4001/socket/websocket?vsn=2.0.0&token=<jwt>` usando Phoenix Channels V2.
+Glia se conecta a `wss://glia.zea.cl/socket/websocket?vsn=2.0.0&token=<jwt>` usando Phoenix Channels V2.
 
 Eventos del servidor:
 - `thinking_delta` — el agente está procesando

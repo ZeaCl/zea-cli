@@ -24,6 +24,6 @@ zea sdui dispatch <session_id> <action>
 curl http://zea-apps:4007/api/apps/<app_id>/manifest -H "Authorization: Bearer $ZEA_TOKEN"
 
 # Sessions
-curl -X POST http://sdui-engine:4006/api/sessions -H "Authorization: Bearer $ZEA_TOKEN" \
+curl -X POST https://sdui.zea.cl/api/sessions -H "Authorization: Bearer $ZEA_TOKEN" \
   -H "Content-Type: application/json" -d '{"app_id":"my_app","token":"$ZEA_TOKEN"}'
 ```

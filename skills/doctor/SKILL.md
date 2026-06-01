@@ -45,9 +45,9 @@ Si `zea doctor run` encuentra fallos:
 
 ### 1. Verificar el servicio afectado
 - **api**: ¿Están corriendo los servicios Docker? `docker ps | grep zea`
-- **auth**: ¿Thalamus está corriendo? `curl http://auth.zea.localhost/.well-known/jwks.json`
-- **venture**: ¿venture-api está corriendo? `curl http://venture.zea.localhost/health`
-- **glia**: ¿Glia está corriendo? `curl http://glia.zea.localhost/api/health`
+- **auth**: ¿Thalamus está corriendo? `curl https://auth.zea.cl/.well-known/jwks.json`
+- **venture**: ¿venture-api está corriendo? `curl https://venture.zea.cl/health`
+- **glia**: ¿Glia está corriendo? `curl https://glia.zea.cl/api/health`
 - **stitch**: ¿STITCH_KEY está configurada? `echo $STITCH_KEY`
 - **tools**: ¿zea CLI instalado? `which zea`
 

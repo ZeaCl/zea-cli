@@ -14,7 +14,7 @@ Skill de desarrollo exclusivo para la API Venture de ZEA Platform. El agente que
 - **API**: `venture-gp-api` (Phoenix/Elixir)
 - **Controller**: `lib/venture_gp_api_web/controllers/gp_controller.ex`
 - **Router**: `lib/venture_gp_api_web/router.ex`
-- **Base URL**: `http://venture-api:4081`
+- **Base URL**: `https://venture.zea.cl`
 
 ## Reglas
 
