@@ -98,7 +98,7 @@ Creá una sesión en opencode-maintenance:4097 con este prompt exacto:
 ```
 Issue: "app list failed with: {error_message}". 
 Skill: maintenance.
-App: sudlich_ventures.
+App: my_app.
 Acción: follow maintenance protocol — diagnose, fix, verify.
 ```
 
@@ -121,7 +121,7 @@ zea app list
 ```
 - Si hay solo una → usarla automáticamente
 - Si hay varias → mostrar la lista y preguntar: "¿Cuál app querés ver?"
-- La app actualmente activa es `sudlich_ventures`
+- La app actualmente activa es `my_app`
 
 ### 2. Verificar que la app funciona
 ```bash
@@ -136,7 +136,7 @@ zea doctor run
 ### 4. Si todo OK
 Mostrar la URL:
 ```
-http://sudlich.zea.localhost/
+http://apps.zea.localhost/
 ```
 
 ⚠️  NUNCA uses estas URLs internas (son para Docker, no para el usuario):
@@ -144,7 +144,7 @@ http://sudlich.zea.localhost/
   ❌ http://sdui-engine:4006/...
   ❌ http://localhost:4006/...
 
-La URL pública SIEMPRE es: http://sudlich.zea.localhost/
+La URL pública SIEMPRE es: http://apps.zea.localhost/
 
 ### 5. Instrucciones para el usuario
 - Abrí la URL en tu navegador
@@ -159,7 +159,7 @@ Cuando el usuario pida "ver el experimento X":
 zea experiment list --app <app_id>
 
 # 2. URL de preview
-http://sudlich.zea.localhost/app?app_id=<app_id>__exp_<nombre>
+http://apps.zea.localhost/app?app_id=<app_id>__exp_<nombre>
 
 # 3. IMPORTANTE: no mergear hasta aprobación humana explícita
 ```

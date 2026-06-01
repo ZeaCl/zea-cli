@@ -79,17 +79,17 @@ curl http://localhost:4000/health
 ### Pantallas Stitch
 ```bash
 # Importar pantalla de Stitch
-zea design import-screen --app sudlich_ventures --stitch-key $STITCH_KEY --screen-id X --state dashboard --intent view_dashboard
+zea design import-screen --app my_app --stitch-key $STITCH_KEY --screen-id X --state dashboard --intent view_dashboard
 
 # Functionalizar (inyectar data-zea-bind + crear intents)
-zea screen functionalize --app sudlich_ventures --screen dashboard --llm
+zea screen functionalize --app my_app --screen dashboard --llm
 
 # Detectar componentes sin API
-zea screen gap-detect --app sudlich_ventures --llm
+zea screen gap-detect --app my_app --llm
 
 # Validación visual
-zea validate --app sudlich_ventures --screen dashboard --visual --browser
-zea validate --app sudlich_ventures --screen dashboard --visual --llm
+zea validate --app my_app --screen dashboard --visual --browser
+zea validate --app my_app --screen dashboard --visual --llm
 ```
 
 ### Datos (Excel → DB)
@@ -114,8 +114,8 @@ zea venture investor create --name "Alpha Capital" --email alpha@example.com --t
 zea venture capital-call create --fund-id X --amount 10000000
 
 # Verificar integridad de datos post-import
-zea verify --app sudlich_ventures --json
-zea verify --app sudlich_ventures --llm       # Reporte con explicación LLM
+zea verify --app my_app --json
+zea verify --app my_app --llm       # Reporte con explicación LLM
 ```
 
 ### Base de datos
@@ -164,7 +164,7 @@ zea branch merge --name feat-X --yes
 ### Visual Host (screenshots vía Playwright)
 ```bash
 docker compose up -d visual-host
-curl -X POST localhost:4090/open -d '{"url":"http://sdui-engine:4006/app?app_id=sudlich_ventures"}'
+curl -X POST localhost:4090/open -d '{"url":"http://sdui-engine:4006/app?app_id=my_app"}'
 curl -X POST localhost:4090/screenshot -d '{"filename":"dashboard.png"}'
 ```
 
@@ -179,7 +179,7 @@ Texto visible para el usuario...
 [
   {"label":"📊 Importar fondos","prompt":"zea venture data import --sheet funds --yes"},
   {"label":"💰 Importar inversores","prompt":"zea venture data import --sheet investors --yes"},
-  {"label":"📋 Verificar","prompt":"zea verify --app sudlich_ventures --json"}
+  {"label":"📋 Verificar","prompt":"zea verify --app my_app --json"}
 ]
 ```
 
@@ -300,7 +300,7 @@ Agente:  "El Excel tiene 5 inversores con name, email, type."
 Agente:  "✅ 5 inversores importados. Total LPs en plataforma: 17."
 
          // Verificar consolidación:
-         zea verify --app sudlich_ventures --json
+         zea verify --app my_app --json
          → active_lps=17, active_funds=8
 Agente:  "Verificación OK: 17 LPs, 8 fondos. Todos los datos del Excel están en la DB."
 ```
@@ -314,7 +314,7 @@ Agente responde en Telegram:
          [
            {"label":"📊 Importar fondos","prompt":"zea venture data import --sheet funds --yes"},
            {"label":"💰 Importar inversores","prompt":"zea venture data import --sheet investors --yes"},
-           {"label":"📋 Verificar","prompt":"zea verify --app sudlich_ventures --json"}
+           {"label":"📋 Verificar","prompt":"zea verify --app my_app --json"}
          ]
 
          → El usuario ve botones. Al tocar uno, el bot ejecuta el CLI directo.

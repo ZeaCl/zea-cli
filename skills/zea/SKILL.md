@@ -57,9 +57,9 @@ curl POST /v1/orchestrate -d '{"message":"...","domain":"venture"}'
 
 ### Pantallas
 ```bash
-zea screen functionalize --app sudlich_ventures --screen dashboard --llm
-zea screen gap-detect --app sudlich_ventures --llm
-zea design import-screen --app sudlich_ventures --stitch-key $STITCH_KEY --screen-id X --state Y
+zea screen functionalize --app my_app --screen dashboard --llm
+zea screen gap-detect --app my_app --llm
+zea design import-screen --app my_app --stitch-key $STITCH_KEY --screen-id X --state Y
 ```
 
 ### Datos
@@ -72,8 +72,8 @@ zea db diff && zea db push --yes
 ### Diagnóstico
 ```bash
 zea diagnose --json
-zea verify --app sudlich_ventures --json
-zea validate --app sudlich_ventures --screen dashboard --visual
+zea verify --app my_app --json
+zea validate --app my_app --screen dashboard --visual
 zea qa status
 ```
 

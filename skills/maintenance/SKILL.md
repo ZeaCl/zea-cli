@@ -91,7 +91,7 @@ Cada 10 respuestas del chat agent, verificá:
 
 ### 1. ¿Siguió el skill?
 - Compará la respuesta con el skill relevante
-- ¿Usó la URL correcta? (sudlich.zea.localhost vs localhost:4006)
+- ¿Usó la URL correcta? (apps.zea.localhost vs localhost:4006)
 - ¿Siguió el protocolo de error? (derivar a maintenance vs improvisar)
 - ¿Mostró URLs internas de Docker? (localhost:4006, sdui-engine:4006)
 
@@ -99,7 +99,7 @@ Cada 10 respuestas del chat agent, verificá:
 Si la respuesta contradice el skill:
 ```bash
 # Escribe en ~/.zea/memory/quality/
-echo '{"deviation":"wrong_url","expected":"sudlich.zea.localhost","got":"localhost:4006","skill":"app","timestamp":"..."}' > ~/.zea/memory/quality/{timestamp}.json
+echo '{"deviation":"wrong_url","expected":"apps.zea.localhost","got":"localhost:4006","skill":"app","timestamp":"..."}' > ~/.zea/memory/quality/{timestamp}.json
 ```
 
 ### 3. Auto-corrección

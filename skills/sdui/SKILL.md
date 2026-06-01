@@ -8,7 +8,7 @@ description: "Server-Driven UI: ver manifiestos, estados, intents. Conectar sesi
 ## Comandos
 ```bash
 # Ver manifiesto de una app
-zea sdui manifest sudlich_ventures
+zea sdui manifest my_app
 zea sdui manifest <app_id>
 
 # Start session
@@ -25,5 +25,5 @@ curl http://zea-apps:4007/api/apps/<app_id>/manifest -H "Authorization: Bearer $
 
 # Sessions
 curl -X POST http://sdui-engine:4006/api/sessions -H "Authorization: Bearer $ZEA_TOKEN" \
-  -H "Content-Type: application/json" -d '{"app_id":"sudlich_ventures","token":"$ZEA_TOKEN"}'
+  -H "Content-Type: application/json" -d '{"app_id":"my_app","token":"$ZEA_TOKEN"}'
 ```

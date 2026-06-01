@@ -129,11 +129,11 @@ Output: Manifiesto actualizado en zea-apps
 **Comandos clave:**
 ```bash
 # Obtener manifiesto actual
-curl http://apps.zea.localhost/api/apps/sudlich_ventures/manifest
+curl http://apps.zea.localhost/api/apps/my_app/manifest
 
 # Actualizar manifiesto (vía API o archivo)
 # Opción A: API
-curl -X PUT http://apps.zea.localhost/api/apps/sudlich_ventures \
+curl -X PUT http://apps.zea.localhost/api/apps/my_app \
   -H "Content-Type: application/json" \
   -d '{"manifest": {...}, "intent_routing": {...}}'
 
@@ -191,14 +191,14 @@ Output: Reporte de verificación (pass/fail por componente)
 
 ```bash
 # Iniciar pipeline para una pantalla
-zea screen functionalize --app sudlich_ventures --screen dashboard
+zea screen functionalize --app my_app --screen dashboard
 
 # Solo analizar (sin modificar)
-zea screen analyze --app sudlich_ventures --screen dashboard
+zea screen analyze --app my_app --screen dashboard
 
 # Solo inyectar bindings
-zea screen inject-bindings --app sudlich_ventures --screen dashboard
+zea screen inject-bindings --app my_app --screen dashboard
 
 # Verificar una pantalla funcionalizada
-zea screen verify --app sudlich_ventures --screen dashboard
+zea screen verify --app my_app --screen dashboard
 ```
