@@ -235,3 +235,33 @@ export async function handleLogin(options) {
     await open(authorizeUrl);
   });
 }
+
+export async function resolveSecret(provider) {
+  try {
+    const config = await loadConfig();
+    const token = process.env.ZEA_PAT || process.env.THALAMUS_PAT || process.env.ZEA_TOKEN || config.token;
+    const apiUrl = process.env.ZEA_API_URL || process.env.THALAMUS_API_URL || config.apiUrl || 'http://auth.zea.localhost';
+    
+    if (!token) return null;
+
+    // 1. Get user_id and org_id
+    const userResp = await zeaFetch(`${apiUrl}/oauth/userinfo`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!userResp.ok) return null;
+    
+    const userinfo = await userResp.json();
+    const userId = userinfo.sub || '';
+    const orgId = userinfo.organization ? userinfo.organization.id : '';
+
+    // 2. Resolve secret from internal endpoint
+    const resolveUrl = `${apiUrl}/api/internal/secrets/resolve?provider=${provider}&user_id=${userId}&org_id=${orgId}`;
+    const secretResp = await zeaFetch(resolveUrl);
+    if (!secretResp.ok) return null;
+    
+    const secretData = await secretResp.json();
+    return secretData.value || null;
+  } catch (e) {
+    return null;
+  }
+}

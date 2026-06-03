@@ -1,5 +1,5 @@
 import zeaFetch from '../lib/http.js';
-import { getClient } from '../client.js';
+import { getClient, resolveSecret } from '../client.js';
 import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
@@ -146,19 +146,20 @@ const STITCH_INIT_SYSTEM_PROMPT = `Eres un agente de diseno especializado en Sti
 
 ## Autenticacion
 
-Stitch MCP requiere OAuth 2.0. El endpoint es https://stitch.googleapis.com/mcp.
-
-Usa el token ADC (Application Default Credentials):
+Stitch MCP requiere OAuth 2.0 via ADC (Application Default Credentials).
 \`\`\`bash
 TOKEN=$(gcloud auth application-default print-access-token)
+# Si necesitas especificar un quota project:
+# TOKEN=$(gcloud auth application-default print-access-token --quota-project=TU_PROJECT_ID)
 \`\`\`
 
-Headers para cada request:
+Headers:
 - Authorization: Bearer $TOKEN
 - Content-Type: application/json
-- X-Goog-User-Project: <tu-project-id>
+- X-Goog-User-Project: <tu-gcp-project-id>  (requerido por Stitch)
 
-Para configurar ADC: gcloud auth application-default login
+Para configurar: gcloud auth application-default login
+Para ver tu quota project: gcloud auth application-default print-access-token --quota-project=TU_PROJECT_ID
 
 ## Paso a paso
 
@@ -229,9 +230,9 @@ export function register(program) {
           process.exit(1);
         }
 
-        const apiKey = opts.stitchKey || process.env.STITCH_KEY;
+        const apiKey = opts.stitchKey || process.env.STITCH_KEY || await resolveSecret('google_stitch');
         if (!apiKey) {
-          console.error('Stitch API key required. Set STITCH_KEY env var or use --stitch-key.');
+          console.error('Stitch API key required. Add it in ZEA Secrets, set STITCH_KEY env var, or use --stitch-key.');
           process.exit(1);
         }
 
@@ -268,9 +269,9 @@ export function register(program) {
     .option('--stitch-key <key>', 'Stitch API key (or use STITCH_KEY env)')
     .action(async (opts) => {
       try {
-        const apiKey = opts.stitchKey || process.env.STITCH_KEY;
+        const apiKey = opts.stitchKey || process.env.STITCH_KEY || await resolveSecret('google_stitch');
         if (!apiKey) {
-          console.error('Stitch API key required. Set STITCH_KEY env var or use --stitch-key.');
+          console.error('Stitch API key required. Add it in ZEA Secrets, set STITCH_KEY env var, or use --stitch-key.');
           process.exit(1);
         }
         const client = await getClient();
@@ -572,7 +573,7 @@ export function register(program) {
     .requiredOption('--design-md <file>', 'Path to DESIGN.md file (visual design system with YAML tokens)')
     .requiredOption('--design-context <file>', 'Path to design-context.md file (UX/UI context)')
     .option('--open', 'Open the Stitch project URL in browser when complete')
-    .option('--app <id>', 'ZEA App ID for saving project reference')
+    .option('--gcp-project <id>', 'GCP project ID for Stitch API quota (X-Goog-User-Project header)')
     .action(async (opts) => {
       try {
         const designMdPath = path.resolve(opts.designMd);
@@ -605,6 +606,9 @@ export function register(program) {
         console.log('2. Read the DESIGN.md — it contains the YAML frontmatter with all design tokens');
         console.log('3. Read the Design Context — it contains personas, screens, flows, and component specs');
         console.log('4. Authenticate: gcloud auth application-default print-access-token');
+        if (opts.gcpProject) {
+          console.log('   GCP project: ' + opts.gcpProject);
+        }
         console.log('5. Call Stitch MCP: create_project → upload_design_md → create_design_system_from_design_md → generate_screen_from_text');
         console.log('6. When done, the Stitch project will be at: https://stitch.withgoogle.com/projects/<projectId>');
         if (opts.app) {
@@ -612,6 +616,12 @@ export function register(program) {
         }
         console.log('');
         console.log('After creating the project, use: zea design stitch-open --project <projectId>');
+        if (!opts.gcpProject) {
+          console.log('');
+          console.log('⚠️  No --gcp-project provided. Discover your GCP project:');
+          console.log('    gcloud projects list --format="value(projectId)"');
+          console.log('    Or: gcloud config get-value project');
+        }
         if (opts.open) {
           console.log('');
           console.log('⚠️  --open flag set. After creating the project, the URL will be opened automatically.');
