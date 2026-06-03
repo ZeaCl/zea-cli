@@ -142,51 +142,46 @@ Reglas del output:
 7. Referencias entre tokens con {path.to.token}
 8. Nombre del sistema evocativo, no generico`;
 
-const STITCH_INIT_SYSTEM_PROMPT = `Eres un agente de diseño especializado en Stitch (stitch.withgoogle.com). Tu tarea es inicializar un proyecto en Stitch usando dos documentos como entrada: un DESIGN.md (sistema de diseño visual con tokens YAML) y un design-context.md (contexto UX/UI con personas, pantallas, flujos y principios).
+const STITCH_INIT_SYSTEM_PROMPT = `Eres un agente de diseno especializado en Stitch (stitch.withgoogle.com). Tu tarea es inicializar un proyecto en Stitch usando dos documentos como entrada: un DESIGN.md (sistema de diseno visual con tokens YAML) y un design-context.md (contexto UX/UI con personas, pantallas, flujos y principios).
 
-Stitch se accede via MCP (JSON-RPC) en el endpoint https://stitch.googleapis.com/mcp. Usa el header X-Goog-Api-Key con la STITCH_KEY.
+Stitch se accede via MCP (JSON-RPC) en el endpoint https://stitch.googleapis.com/mcp.
+
+IMPORTANTE: Para operaciones de LECTURA (list_screens, get_screen, list_design_systems, tools/list) se usa header X-Goog-Api-Key con la STITCH_KEY. Para operaciones de ESCRITURA (create_project, create_design_system, generate_screen_from_text) se requiere autenticacion OAuth 2. Si no tienes token OAuth, crea el proyecto manualmente en la UI de Stitch (https://stitch.withgoogle.com) y luego usa los tool calls de lectura con la API key.
+
+## Herramientas MCP disponibles
+
+- create_project(title) → projectId
+- create_design_system_from_design_md(projectId, designMd) → designSystemId  
+- generate_screen_from_text(projectId, prompt, deviceType:"MOBILE") → screen
+- list_screens(projectId) → screens[]
+- get_screen(projectId, screenId) → screen con HTML
+- apply_design_system(projectId, selectedScreenInstances, assetId) → aplica design system a pantallas
 
 ## Paso a paso
 
-### 1. Descubrir herramientas disponibles
-\`\`\`json
-{"jsonrpc":"2.0","method":"tools/list","params":{},"id":1}
-\`\`\`
-Esto te devolvera las herramientas disponibles en el servidor MCP de Stitch. Busca herramientas como create_project, apply_design_system, create_screen, o similares.
+### 1. Crear el proyecto
+Usa create_project con titulo extraido del DESIGN.md frontmatter (campo "name"). Guarda el projectId.
 
-### 2. Crear el proyecto
-Usando la herramienta de creacion de proyecto (ej: create_project o create_design), crea un proyecto con:
-- Nombre: extraelo del DESIGN.md frontmatter (campo \"name\")
-- Descripcion: del overview del design-context.md
-- Tipo: mobile (web-app o mobile-app segun el design context)
+### 2. Subir DESIGN.md y crear design system
+Usa create_design_system_from_design_md con el projectId y el contenido COMPLETO del DESIGN.md (incluyendo el YAML frontmatter). Esto crea automaticamente el design system con todos los tokens.
 
-### 3. Aplicar el sistema de diseño
-Lee el YAML frontmatter del DESIGN.md. Contiene tokens de:
-- colors (primary, secondary, tertiary, neutral, etc.)
-- typography (niveles con fontFamily, fontSize, fontWeight, lineHeight, letterSpacing)
-- rounded (sm, md, lg, xl, full, child-*)
-- spacing (xs, sm, md, lg, xl, xxl)
-- components (buttons, inputs, cards con sus variantes)
+### 3. Crear pantallas iniciales
+Del design-context.md, extrae las Key Screens (seccion 5). Para cada pantalla marcada como MVP, usa generate_screen_from_text con:
+- projectId del paso 1
+- prompt: describe la pantalla usando el proposito, jerarquia y CTA del design context
+- deviceType: "MOBILE"
 
-Mapea estos tokens a la herramienta de Stitch que corresponda (ej: apply_design_system, set_tokens, update_theme). Cada token YAML debe convertirse en el formato que espera Stitch.
+Prioriza: Home Matutino, Sesion Activa, Panel de Progreso, Kit de Calma.
 
-### 4. Crear pantalla(s) inicial(es)
-Del design-context.md, extrae las Key Screens (seccion 5). Para cada pantalla:
-- Nombre: de la seccion Key Screens
-- Descripcion: proposito y contenido de la pantalla
-- Usa la herramienta de creacion de pantalla de Stitch (ej: create_screen)
-
-Prioriza las pantallas marcadas como MVP en el design context.
-
-### 5. Verificar
-Lista las pantallas y confirma que el proyecto quedo configurado correctamente.
+### 4. Verificar
+Usa list_screens para confirmar que todas las pantallas se crearon correctamente.
 
 ## Output esperado
 Al finalizar, muestra:
 - Project ID de Stitch
+- Design System ID
 - Pantallas creadas con sus IDs
-- Confirmacion de tokens aplicados
-- Sugerencia: guarda el project ID en memoria con: zea memory init --app <app_id> --stitch-project <project_id>`;
+- Sugerencia: guarda el project ID con: zea memory init --app <app_id> --stitch-project <project_id>`;
 
 async function readMemory(appId, file) {
   try {
