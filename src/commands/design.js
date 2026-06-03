@@ -571,18 +571,12 @@ export function register(program) {
     .description('Initialize a Stitch project from DESIGN.md and design-context.md')
     .requiredOption('--design-md <file>', 'Path to DESIGN.md file (visual design system with YAML tokens)')
     .requiredOption('--design-context <file>', 'Path to design-context.md file (UX/UI context)')
-    .option('--stitch-key <key>', 'Stitch API key (or use STITCH_KEY env var)')
+    .option('--open', 'Open the Stitch project URL in browser when complete')
     .option('--app <id>', 'ZEA App ID for saving project reference')
     .action(async (opts) => {
       try {
         const designMdPath = path.resolve(opts.designMd);
         const contextPath = path.resolve(opts.designContext);
-        const apiKey = opts.stitchKey || process.env.STITCH_KEY;
-
-        if (!apiKey) {
-          console.error('❌ Stitch API key required. Set STITCH_KEY env var or use --stitch-key.');
-          process.exit(1);
-        }
 
         // Read both files
         const designMd = await fs.readFile(designMdPath, 'utf8');
@@ -608,15 +602,57 @@ export function register(program) {
         console.log('You are the AI agent executing this command. Your task:');
         console.log('');
         console.log('1. Read the System Prompt (Stitch Agent role) above');
-        console.log('2. Read the DESIGN.md above — it contains the YAML frontmatter with all design tokens');
-        console.log('3. Read the Design Context above — it contains personas, screens, flows, and component specs');
-        console.log('4. Connect to Stitch MCP at https://stitch.googleapis.com/mcp with your API key');
-        console.log('5. Create a project, apply the design system, and create initial screens');
+        console.log('2. Read the DESIGN.md — it contains the YAML frontmatter with all design tokens');
+        console.log('3. Read the Design Context — it contains personas, screens, flows, and component specs');
+        console.log('4. Authenticate: gcloud auth application-default print-access-token');
+        console.log('5. Call Stitch MCP: create_project → upload_design_md → create_design_system_from_design_md → generate_screen_from_text');
+        console.log('6. When done, the Stitch project will be at: https://stitch.withgoogle.com/projects/<projectId>');
         if (opts.app) {
-          console.log('6. Save the Stitch project ID with: zea memory init --app ' + opts.app + ' --stitch-project <project_id>');
+          console.log('7. Save reference: zea memory init --app ' + opts.app + ' --stitch-project <projectId>');
         }
         console.log('');
-        console.log('Your STITCH_KEY is: ' + apiKey.substring(0, 8) + '...');
+        console.log('After creating the project, use: zea design stitch-open --project <projectId>');
+        if (opts.open) {
+          console.log('');
+          console.log('⚠️  --open flag set. After creating the project, the URL will be opened automatically.');
+          console.log('    Run: open https://stitch.withgoogle.com/projects/<projectId>');
+        }
+      } catch (e) {
+        console.error('❌ Error:', e.message);
+        process.exit(1);
+      }
+    });
+
+  // --- stitch-open ---
+  designCmd.command('stitch-open')
+    .description('Open a Stitch project in the browser')
+    .option('--project <id>', 'Stitch project ID')
+    .option('--app <id>', 'ZEA App ID (reads stitch-project from memory)')
+    .action(async (opts) => {
+      try {
+        let projectId = opts.project;
+
+        // If no project ID, try reading from app memory
+        if (!projectId && opts.app) {
+          const mem = await readMemory(opts.app, 'stitch.json');
+          projectId = mem?.project_id;
+          if (!projectId) {
+            console.error('❌ No Stitch project found for app ' + opts.app + '. Run: zea memory init --app ' + opts.app + ' --stitch-project <id>');
+            process.exit(1);
+          }
+          console.log('Stitch project from memory: ' + projectId);
+        }
+
+        if (!projectId) {
+          console.error('❌ Provide --project <id> or --app <id>');
+          process.exit(1);
+        }
+
+        const url = 'https://stitch.withgoogle.com/projects/' + projectId;
+        console.log('Opening: ' + url);
+
+        const { execSync } = await import('child_process');
+        execSync('open ' + url);
       } catch (e) {
         console.error('❌ Error:', e.message);
         process.exit(1);
