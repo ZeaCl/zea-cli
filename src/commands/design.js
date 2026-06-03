@@ -142,6 +142,52 @@ Reglas del output:
 7. Referencias entre tokens con {path.to.token}
 8. Nombre del sistema evocativo, no generico`;
 
+const STITCH_INIT_SYSTEM_PROMPT = `Eres un agente de diseño especializado en Stitch (stitch.withgoogle.com). Tu tarea es inicializar un proyecto en Stitch usando dos documentos como entrada: un DESIGN.md (sistema de diseño visual con tokens YAML) y un design-context.md (contexto UX/UI con personas, pantallas, flujos y principios).
+
+Stitch se accede via MCP (JSON-RPC) en el endpoint https://stitch.googleapis.com/mcp. Usa el header X-Goog-Api-Key con la STITCH_KEY.
+
+## Paso a paso
+
+### 1. Descubrir herramientas disponibles
+\`\`\`json
+{"jsonrpc":"2.0","method":"tools/list","params":{},"id":1}
+\`\`\`
+Esto te devolvera las herramientas disponibles en el servidor MCP de Stitch. Busca herramientas como create_project, apply_design_system, create_screen, o similares.
+
+### 2. Crear el proyecto
+Usando la herramienta de creacion de proyecto (ej: create_project o create_design), crea un proyecto con:
+- Nombre: extraelo del DESIGN.md frontmatter (campo \"name\")
+- Descripcion: del overview del design-context.md
+- Tipo: mobile (web-app o mobile-app segun el design context)
+
+### 3. Aplicar el sistema de diseño
+Lee el YAML frontmatter del DESIGN.md. Contiene tokens de:
+- colors (primary, secondary, tertiary, neutral, etc.)
+- typography (niveles con fontFamily, fontSize, fontWeight, lineHeight, letterSpacing)
+- rounded (sm, md, lg, xl, full, child-*)
+- spacing (xs, sm, md, lg, xl, xxl)
+- components (buttons, inputs, cards con sus variantes)
+
+Mapea estos tokens a la herramienta de Stitch que corresponda (ej: apply_design_system, set_tokens, update_theme). Cada token YAML debe convertirse en el formato que espera Stitch.
+
+### 4. Crear pantalla(s) inicial(es)
+Del design-context.md, extrae las Key Screens (seccion 5). Para cada pantalla:
+- Nombre: de la seccion Key Screens
+- Descripcion: proposito y contenido de la pantalla
+- Usa la herramienta de creacion de pantalla de Stitch (ej: create_screen)
+
+Prioriza las pantallas marcadas como MVP en el design context.
+
+### 5. Verificar
+Lista las pantallas y confirma que el proyecto quedo configurado correctamente.
+
+## Output esperado
+Al finalizar, muestra:
+- Project ID de Stitch
+- Pantallas creadas con sus IDs
+- Confirmacion de tokens aplicados
+- Sugerencia: guarda el project ID en memoria con: zea memory init --app <app_id> --stitch-project <project_id>`;
+
 async function readMemory(appId, file) {
   try {
     return JSON.parse(await fs.readFile(path.join(MEMORY_DIR, 'apps', appId, file), 'utf8'));
@@ -501,6 +547,63 @@ export function register(program) {
         console.log(`4. Save the output to: ${outputPath}`);
         console.log('');
         console.log('The output must follow the Google Labs DESIGN.md spec. Every visual decision must be justified from the Design Context.');
+      } catch (e) {
+        console.error('❌ Error:', e.message);
+        process.exit(1);
+      }
+    });
+
+  // --- stitch-init ---
+  designCmd.command('stitch-init')
+    .description('Initialize a Stitch project from DESIGN.md and design-context.md')
+    .requiredOption('--design-md <file>', 'Path to DESIGN.md file (visual design system with YAML tokens)')
+    .requiredOption('--design-context <file>', 'Path to design-context.md file (UX/UI context)')
+    .option('--stitch-key <key>', 'Stitch API key (or use STITCH_KEY env var)')
+    .option('--app <id>', 'ZEA App ID for saving project reference')
+    .action(async (opts) => {
+      try {
+        const designMdPath = path.resolve(opts.designMd);
+        const contextPath = path.resolve(opts.designContext);
+        const apiKey = opts.stitchKey || process.env.STITCH_KEY;
+
+        if (!apiKey) {
+          console.error('❌ Stitch API key required. Set STITCH_KEY env var or use --stitch-key.');
+          process.exit(1);
+        }
+
+        // Read both files
+        const designMd = await fs.readFile(designMdPath, 'utf8');
+        const designContext = await fs.readFile(contextPath, 'utf8');
+
+        console.log('═══ Stitch Project Initializer ═══');
+        console.log('DESIGN.md: ' + designMdPath + ' (' + designMd.length + ' bytes)');
+        console.log('Design Context: ' + contextPath + ' (' + designContext.length + ' bytes)');
+        if (opts.app) console.log('ZEA App: ' + opts.app);
+        console.log('');
+        console.log(STITCH_INIT_SYSTEM_PROMPT);
+        console.log('');
+        console.log('─── DESIGN.md ───');
+        console.log('');
+        console.log(designMd);
+        console.log('');
+        console.log('─── DESIGN CONTEXT ───');
+        console.log('');
+        console.log(designContext);
+        console.log('');
+        console.log('─── INSTRUCTIONS ───');
+        console.log('');
+        console.log('You are the AI agent executing this command. Your task:');
+        console.log('');
+        console.log('1. Read the System Prompt (Stitch Agent role) above');
+        console.log('2. Read the DESIGN.md above — it contains the YAML frontmatter with all design tokens');
+        console.log('3. Read the Design Context above — it contains personas, screens, flows, and component specs');
+        console.log('4. Connect to Stitch MCP at https://stitch.googleapis.com/mcp with your API key');
+        console.log('5. Create a project, apply the design system, and create initial screens');
+        if (opts.app) {
+          console.log('6. Save the Stitch project ID with: zea memory init --app ' + opts.app + ' --stitch-project <project_id>');
+        }
+        console.log('');
+        console.log('Your STITCH_KEY is: ' + apiKey.substring(0, 8) + '...');
       } catch (e) {
         console.error('❌ Error:', e.message);
         process.exit(1);
