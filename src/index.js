@@ -266,6 +266,330 @@ registerXlsx(program);program.command('mcp')
               name: 'glia_list_agents',
               description: 'Lista agentes activos en el swarm Glia',
               inputSchema: { type: 'object', properties: {} }
+            },
+            {
+              name: 'db_diff',
+              description: 'Show SQL diff between branch (or main) and current DB',
+              inputSchema: {
+                type: 'object',
+                properties: {
+                  branch: { type: 'string', description: 'Branch name (optional)' }
+                }
+              }
+            },
+            {
+              name: 'db_push',
+              description: 'Apply SQL schema to the database. Overwrites/applies changes.',
+              inputSchema: {
+                type: 'object',
+                properties: {
+                  branch: { type: 'string', description: 'Branch name (optional)' }
+                }
+              }
+            },
+            {
+              name: 'db_reset',
+              description: 'Reset database to clean init-venture.sql schema (DELETES ALL DATA)',
+              inputSchema: { type: 'object', properties: {} }
+            },
+            {
+              name: 'db_migrations_new',
+              description: 'Create a new migration file',
+              inputSchema: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string', description: 'Migration name (e.g. add-pending-tasks)' }
+                },
+                required: ['name']
+              }
+            },
+            {
+              name: 'db_migrations_list',
+              description: 'List all migrations',
+              inputSchema: { type: 'object', properties: {} }
+            },
+            {
+              name: 'sdui_start',
+              description: 'Start an SDUI session and get initial state',
+              inputSchema: {
+                type: 'object',
+                properties: {
+                  app_id: { type: 'string', description: 'ZEA App ID' },
+                  org_id: { type: 'string', description: 'Organization ID (optional)' }
+                },
+                required: ['app_id']
+              }
+            },
+            {
+              name: 'sdui_dispatch',
+              description: 'Dispatch an intent/action to an SDUI session',
+              inputSchema: {
+                type: 'object',
+                properties: {
+                  session_id: { type: 'string', description: 'SDUI Session ID' },
+                  action: { type: 'string', description: 'Action/Intent name' },
+                  payload: { type: 'object', description: 'JSON payload objects (optional)' }
+                },
+                required: ['session_id', 'action']
+              }
+            },
+            {
+              name: 'sdui_manifest',
+              description: 'Show app manifest summary (states, intents, shell)',
+              inputSchema: {
+                type: 'object',
+                properties: {
+                  app_id: { type: 'string', description: 'ZEA App ID' }
+                },
+                required: ['app_id']
+              }
+            },
+            {
+              name: 'sdui_screens',
+              description: 'List all screens/states in the app manifest',
+              inputSchema: {
+                type: 'object',
+                properties: {
+                  app_id: { type: 'string', description: 'ZEA App ID' }
+                },
+                required: ['app_id']
+              }
+            },
+            {
+              name: 'sdui_screen',
+              description: 'Show the HTML content of a StitchedScreen state',
+              inputSchema: {
+                type: 'object',
+                properties: {
+                  app_id: { type: 'string', description: 'ZEA App ID' },
+                  state: { type: 'string', description: 'State name' }
+                },
+                required: ['app_id', 'state']
+              }
+            },
+            {
+              name: 'venture_fund_list',
+              description: 'List funds for the active organization',
+              inputSchema: { type: 'object', properties: {} }
+            },
+            {
+              name: 'venture_fund_create',
+              description: 'Create a new fund (runs async validation, fees, transitions)',
+              inputSchema: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string', description: 'Fund name' },
+                  type: { type: 'string', description: 'Fund type (e.g. VENTURE_CAPITAL, HEDGE_FUND)', default: 'VENTURE_CAPITAL' },
+                  hard_cap: { type: 'string', description: 'Hard cap amount (optional)' },
+                  currency: { type: 'string', description: 'Currency (default: USD)', default: 'USD' },
+                  mgmt_fee: { type: 'string', description: 'Management fee config JSON string (optional)' },
+                  carry: { type: 'string', description: 'Carried interest config JSON string (optional)' }
+                },
+                required: ['name']
+              }
+            },
+            {
+              name: 'venture_fund_show',
+              description: 'Show fund details by ID',
+              inputSchema: {
+                type: 'object',
+                properties: {
+                  fund_id: { type: 'string', description: 'Fund ID' }
+                },
+                required: ['fund_id']
+              }
+            },
+            {
+              name: 'venture_fund_transition',
+              description: 'Transition fund to a new status (e.g. FUNDRAISING, ACTIVE, HARVESTING, CLOSED)',
+              inputSchema: {
+                type: 'object',
+                properties: {
+                  fund_id: { type: 'string', description: 'Fund ID' },
+                  status: { type: 'string', description: 'New status' }
+                },
+                required: ['fund_id', 'status']
+              }
+            },
+            {
+              name: 'venture_fund_configure_fees',
+              description: 'Configure management fee and carried interest for a fund',
+              inputSchema: {
+                type: 'object',
+                properties: {
+                  fund_id: { type: 'string', description: 'Fund ID' },
+                  mgmt_fee: { type: 'string', description: 'Management fee config JSON string (optional)' },
+                  carry: { type: 'string', description: 'Carried interest config JSON string (optional)' }
+                },
+                required: ['fund_id']
+              }
+            },
+            {
+              name: 'venture_dashboard',
+              description: 'Show GP dashboard for the active organization',
+              inputSchema: { type: 'object', properties: {} }
+            },
+            {
+              name: 'venture_capital_call_list',
+              description: 'List capital calls',
+              inputSchema: { type: 'object', properties: {} }
+            },
+            {
+              name: 'venture_capital_call_create',
+              description: 'Create a capital call (sync API or async Cerebelum workflow)',
+              inputSchema: {
+                type: 'object',
+                properties: {
+                  fund_id: { type: 'string', description: 'Fund ID' },
+                  amount: { type: 'string', description: 'Total amount' },
+                  due_date: { type: 'string', description: 'Due date (YYYY-MM-DD)' },
+                  purpose: { type: 'string', description: 'Purpose description (optional)' },
+                  use_workflow: { type: 'boolean', description: 'Use async Cerebelum workflow (default: false)' }
+                },
+                required: ['fund_id', 'amount', 'due_date']
+              }
+            },
+            {
+              name: 'venture_capital_call_show',
+              description: 'Show capital call details by ID',
+              inputSchema: {
+                type: 'object',
+                properties: {
+                  call_id: { type: 'string', description: 'Capital Call ID' }
+                },
+                required: ['call_id']
+              }
+            },
+            {
+              name: 'venture_capital_call_send',
+              description: 'Send capital call to investors',
+              inputSchema: {
+                type: 'object',
+                properties: {
+                  call_id: { type: 'string', description: 'Capital Call ID' }
+                },
+                required: ['call_id']
+              }
+            },
+            {
+              name: 'venture_investor_list',
+              description: 'List investors',
+              inputSchema: { type: 'object', properties: {} }
+            },
+            {
+              name: 'venture_investor_create',
+              description: 'Create an investor (LP)',
+              inputSchema: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string', description: 'Investor name' },
+                  email: { type: 'string', description: 'Investor email' },
+                  type: { type: 'string', description: 'Investor type (INDIVIDUAL, INSTITUTIONAL, CORPORATE, FAMILY_OFFICE)', default: 'INDIVIDUAL' }
+                },
+                required: ['name', 'email']
+              }
+            },
+            {
+              name: 'venture_investor_add_commitment',
+              description: 'Add investor commitment to a fund',
+              inputSchema: {
+                type: 'object',
+                properties: {
+                  investor_id: { type: 'string', description: 'Investor ID' },
+                  fund_id: { type: 'string', description: 'Fund ID' },
+                  amount: { type: 'string', description: 'Commitment amount' }
+                },
+                required: ['investor_id', 'fund_id', 'amount']
+              }
+            },
+            {
+              name: 'venture_data_add_table',
+              description: 'Create a new table in the Venture DB and update init-venture.sql',
+              inputSchema: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string', description: 'Table name (e.g. pending_tasks)' },
+                  fields: { type: 'string', description: 'Fields array as JSON string: [{"name": "title", "type": "VARCHAR(255)", "nullable": false}]' }
+                },
+                required: ['name', 'fields']
+              }
+            },
+            {
+              name: 'venture_api_add_endpoint',
+              description: 'Generate controller code for a new API endpoint in venture-gp-api',
+              inputSchema: {
+                type: 'object',
+                properties: {
+                  method: { type: 'string', description: 'HTTP method (GET, POST, PUT, DELETE)' },
+                  path: { type: 'string', description: 'Route path (e.g. /gp/tasks)' },
+                  handler: { type: 'string', description: 'Handler function name (e.g. list_tasks)' }
+                },
+                required: ['method', 'path', 'handler']
+              }
+            },
+            {
+              name: 'venture_data_import',
+              description: 'Import data from Excel file into Venture DB',
+              inputSchema: {
+                type: 'object',
+                properties: {
+                  file_path: { type: 'string', description: 'Path to Excel file' },
+                  use_llm: { type: 'boolean', description: 'Use LLM for auto-mapping columns (default: false)' }
+                },
+                required: ['file_path']
+              }
+            },
+            {
+              name: 'design_list_screens',
+              description: 'List Stitch screens for an app',
+              inputSchema: {
+                type: 'object',
+                properties: {
+                  app_id: { type: 'string', description: 'ZEA App ID' },
+                  stitch_key: { type: 'string', description: 'Stitch API Key (optional)' }
+                },
+                required: ['app_id']
+              }
+            },
+            {
+              name: 'design_import_screen',
+              description: 'Import a Stitch screen into ZEA app manifest',
+              inputSchema: {
+                type: 'object',
+                properties: {
+                  app_id: { type: 'string', description: 'ZEA App ID' },
+                  screen_id: { type: 'string', description: 'Stitch screen ID' },
+                  state: { type: 'string', description: 'SDUI state name' },
+                  intent: { type: 'string', description: 'Intent name for routing' },
+                  stitch_key: { type: 'string', description: 'Stitch API Key (optional)' }
+                },
+                required: ['app_id', 'screen_id', 'state', 'intent']
+              }
+            },
+            {
+              name: 'design_status',
+              description: 'Show import status for an app',
+              inputSchema: {
+                type: 'object',
+                properties: {
+                  app_id: { type: 'string', description: 'ZEA App ID' }
+                },
+                required: ['app_id']
+              }
+            },
+            {
+              name: 'design_update_design',
+              description: 'Update design system tokens (colors, typography)',
+              inputSchema: {
+                type: 'object',
+                properties: {
+                  app_id: { type: 'string', description: 'ZEA App ID' },
+                  token: { type: 'string', description: 'Token path (e.g. colors.primary)' },
+                  value: { type: 'string', description: 'New value' },
+                  experiment: { type: 'string', description: 'Experiment branch name (optional)' }
+                },
+                required: ['app_id', 'token', 'value']
+              }
             }
           ]
         };
@@ -274,6 +598,22 @@ registerXlsx(program);program.command('mcp')
       server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const { name, arguments: args } = request.params;
         const client = await getClient();
+
+        const runCli = async (argsArray) => {
+          const { execFileSync } = await import('child_process');
+          const cliPath = process.argv[1];
+          try {
+            const output = execFileSync(process.execPath, [cliPath, ...argsArray], { encoding: 'utf-8', timeout: 300000 });
+            return {
+              content: [{ type: 'text', text: output.trim() || '(no output)' }]
+            };
+          } catch (e) {
+            return {
+              isError: true,
+              content: [{ type: 'text', text: `Command execution failed: ${e.stdout || ''}\n${e.stderr || e.message}` }]
+            };
+          }
+        };
 
         try {
           switch (name) {
@@ -494,6 +834,127 @@ registerXlsx(program);program.command('mcp')
               return {
                 content: [{ type: 'text', text: JSON.stringify(result.agents || [], null, 2) }]
               };
+            }
+            case 'db_diff': {
+              const cmdArgs = ['db', 'diff'];
+              if (args.branch) cmdArgs.push('--branch', args.branch);
+              cmdArgs.push('--json');
+              return await runCli(cmdArgs);
+            }
+            case 'db_push': {
+              const cmdArgs = ['db', 'push'];
+              if (args.branch) cmdArgs.push('--branch', args.branch);
+              cmdArgs.push('--yes');
+              return await runCli(cmdArgs);
+            }
+            case 'db_reset': {
+              return await runCli(['db', 'reset', '--yes']);
+            }
+            case 'db_migrations_new': {
+              return await runCli(['db', 'migrations', 'new', '--name', args.name]);
+            }
+            case 'db_migrations_list': {
+              return await runCli(['db', 'migrations', 'list', '--json']);
+            }
+            case 'sdui_start': {
+              const cmdArgs = ['sdui', 'start', args.app_id];
+              if (args.org_id) cmdArgs.push('--org-id', args.org_id);
+              return await runCli(cmdArgs);
+            }
+            case 'sdui_dispatch': {
+              const payloadStr = args.payload ? JSON.stringify(args.payload) : '{}';
+              return await runCli(['sdui', 'dispatch', args.session_id, args.action, payloadStr]);
+            }
+            case 'sdui_manifest': {
+              return await runCli(['sdui', 'manifest', args.app_id]);
+            }
+            case 'sdui_screens': {
+              return await runCli(['sdui', 'screens', args.app_id]);
+            }
+            case 'sdui_screen': {
+              return await runCli(['sdui', 'screen', args.app_id, args.state]);
+            }
+            case 'venture_fund_list': {
+              return await runCli(['venture', 'fund', 'list']);
+            }
+            case 'venture_fund_create': {
+              const cmdArgs = ['venture', 'fund', 'create', '--name', args.name];
+              if (args.type) cmdArgs.push('--type', args.type);
+              if (args.hard_cap) cmdArgs.push('--hard-cap', args.hard_cap);
+              if (args.currency) cmdArgs.push('--currency', args.currency);
+              if (args.mgmt_fee) cmdArgs.push('--mgmt-fee', args.mgmt_fee);
+              if (args.carry) cmdArgs.push('--carry', args.carry);
+              return await runCli(cmdArgs);
+            }
+            case 'venture_fund_show': {
+              return await runCli(['venture', 'fund', 'show', args.fund_id]);
+            }
+            case 'venture_fund_transition': {
+              return await runCli(['venture', 'fund', 'transition', args.fund_id, '--status', args.status]);
+            }
+            case 'venture_fund_configure_fees': {
+              const cmdArgs = ['venture', 'fund', 'configure-fees', args.fund_id];
+              if (args.mgmt_fee) cmdArgs.push('--mgmt-fee', args.mgmt_fee);
+              if (args.carry) cmdArgs.push('--carry', args.carry);
+              return await runCli(cmdArgs);
+            }
+            case 'venture_dashboard': {
+              return await runCli(['venture', 'dashboard']);
+            }
+            case 'venture_capital_call_list': {
+              return await runCli(['venture', 'capital-call', 'list']);
+            }
+            case 'venture_capital_call_create': {
+              const cmdArgs = ['venture', 'capital-call', 'create', '--fund', args.fund_id, '--amount', args.amount, '--due-date', args.due_date];
+              if (args.purpose) cmdArgs.push('--purpose', args.purpose);
+              if (args.use_workflow) cmdArgs.push('--workflow');
+              return await runCli(cmdArgs);
+            }
+            case 'venture_capital_call_show': {
+              return await runCli(['venture', 'capital-call', 'show', args.call_id]);
+            }
+            case 'venture_capital_call_send': {
+              return await runCli(['venture', 'capital-call', 'send', args.call_id]);
+            }
+            case 'venture_investor_list': {
+              return await runCli(['venture', 'investor', 'list']);
+            }
+            case 'venture_investor_create': {
+              const cmdArgs = ['venture', 'investor', 'create', '--name', args.name, '--email', args.email];
+              if (args.type) cmdArgs.push('--type', args.type);
+              return await runCli(cmdArgs);
+            }
+            case 'venture_investor_add_commitment': {
+              return await runCli(['venture', 'investor', 'add-commitment', '--investor', args.investor_id, '--fund', args.fund_id, '--amount', args.amount]);
+            }
+            case 'venture_data_add_table': {
+              return await runCli(['venture', 'data', 'add-table', '--name', args.name, '--fields', args.fields]);
+            }
+            case 'venture_api_add_endpoint': {
+              return await runCli(['venture', 'api', 'add-endpoint', '--method', args.method, '--path', args.path, '--handler', args.handler]);
+            }
+            case 'venture_data_import': {
+              const cmdArgs = ['venture', 'data', 'import', '--file', args.file_path, '--yes'];
+              if (args.use_llm) cmdArgs.push('--llm');
+              return await runCli(cmdArgs);
+            }
+            case 'design_list_screens': {
+              const cmdArgs = ['design', 'list-screens', '--app', args.app_id];
+              if (args.stitch_key) cmdArgs.push('--stitch-key', args.stitch_key);
+              return await runCli(cmdArgs);
+            }
+            case 'design_import_screen': {
+              const cmdArgs = ['design', 'import-screen', '--app', args.app_id, '--screen-id', args.screen_id, '--state', args.state, '--intent', args.intent];
+              if (args.stitch_key) cmdArgs.push('--stitch-key', args.stitch_key);
+              return await runCli(cmdArgs);
+            }
+            case 'design_status': {
+              return await runCli(['design', 'status', '--app', args.app_id]);
+            }
+            case 'design_update_design': {
+              const cmdArgs = ['design', 'update-design', '--app', args.app_id, '--token', args.token, '--value', args.value];
+              if (args.experiment) cmdArgs.push('--experiment', args.experiment);
+              return await runCli(cmdArgs);
             }
             default:
               throw new Error(`Unknown tool: ${name}`);
