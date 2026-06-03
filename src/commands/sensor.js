@@ -9,7 +9,6 @@ export function register(program) {
   sensorCmd.command('transcribe')
     .description('Transcribe audio files to text using MLX Whisper (Apple Silicon)')
     .argument('<files...>', 'Audio files or directories to transcribe')
-    .option('--app <id>', 'App ID for REML tracking')
     .option('-m, --model <model>', 'Whisper model', 'large-v3-turbo')
     .option('-l, --language <lang>', 'Language code', 'es')
     .option('-o, --output-dir <dir>', 'Output directory', '.')
@@ -18,7 +17,7 @@ export function register(program) {
     .action(async (files, options) => {
       const scriptPath = '/Users/dev/Documents/zea/sensor/priv/python/transcribir';
       const { spawnSync } = await import('child_process');
-      await withLearning(options.app || 'sensor', 'sensor.transcribe', async () => {
+      await withLearning('sensor', 'sensor.transcribe', async () => {
         const args = files.concat([
           '--model', options.model,
           '--language', options.language,
