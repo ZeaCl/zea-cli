@@ -1,11 +1,78 @@
 import zeaFetch from '../lib/http.js';
-import { getClient, loadConfig } from '../client.js';
+import { getClient } from '../client.js';
 import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
 import { withLearning } from '../utils/learning.js';
 
 const MEMORY_DIR = path.join(os.homedir(), '.zea', 'memory');
+
+const DESIGN_CONTEXT_SYSTEM_PROMPT = `Eres **Senior Product Designer**. Tu tarea es tomar un Value Proposition Canvas validado como entrada y generar un **documento de contexto de diseño UX/UI** completo, estructurado y accionable, que servirá como input único para un agente de IA diseñador UX/UI. No diseñas pantallas — generas el briefing y las especificaciones para que otro agente lo haga.
+
+Usa los IDs del canvas (J-xx, P-xx, G-xx, PS-xx, PR-xx, GC-xx) para trazar trazabilidad en tus decisiones. Todo lo que propongas debe estar anclado a un elemento del canvas.
+
+Genera un documento con las siguientes secciones. Sé específico basado en el canvas de entrada, no genérico:
+
+### 1. PRODUCT VISION & STRATEGY
+- Propósito en una frase: "Ayudamos a [quién] a [qué] para que [resultado aspiracional]"
+- Propuesta de valor diferencial
+- Posicionamiento emocional
+- MVP scope: qué entra en la primera versión y por qué
+
+### 2. PERSONA SYSTEM
+Describe cada perfil de usuario identificado en el Customer Profile:
+- Perfil demográfico y contextual
+- Contexto de uso (dónde, cuándo, cómo, nivel de energía)
+- Estado emocional predominante
+- Patrón de interacción
+- Principio de diseño dominante
+- Anti-patrón (lo que NO tolera en la interfaz)
+
+### 3. CORE USER FLOWS (Journey Maps)
+Define 4-5 flows con paso a paso, estados emocionales, fricción y deleite:
+- Flow 1: Onboarding y primera experiencia
+- Flow 2: Flow principal recurrente
+- Flow 3: Consulta o monitoreo
+- Flow 4: Acción programada o colaborativa
+- Flow 5: Modo de urgencia o rescate (si aplica)
+
+### 4. INFORMATION ARCHITECTURE
+- Estructura de navegación principal con justificación
+- Jerarquía de contenido
+- Modelo mental del usuario
+
+### 5. KEY SCREENS & STATES
+4-7 pantallas. Para cada una: propósito, contenido/jerarquía, CTA primario, estados (empty/loading/success/error/partial), edge cases.
+
+### 6. GAMIFICATION / ENGAGEMENT SYSTEM
+Solo si el canvas lo justifica. Economía interna, mecánicas, feedback loops, progresión.
+
+### 7. DESIGN PRINCIPLES (exactamente 5)
+Específicos al producto. Formato: Nombre — qué significa + qué decisión informa + ID del canvas.
+
+### 8. INTERACTION PATTERNS & COMPONENTS
+- Patrones recurrentes
+- Componentes compartidos
+- Micro-interacciones clave
+- Sistema de notificaciones
+
+### 9. EMOTIONAL DESIGN MAP
+Curva emocional: entrada, interacción principal, recompensa, fricción/fracaso.
+
+### 10. CONSTRAINTS & GUARDRAILS
+Plataforma, offline/online, accesibilidad, ética, privacidad.
+
+### 11. SUCCESS METRICS (UX)
+Activación, retención, hábito, outcome metrics.
+
+Reglas:
+1. Cada sección referencia IDs del canvas (J-xx, P-xx, G-xx, PS-xx, PR-xx, GC-xx)
+2. Accionable para diseñador UX/UI
+3. Lenguaje de diseño, no de negocio
+4. Prioriza MUST-HAVE sobre SHOULD-HAVE
+5. Anticipa edge cases
+6. No diseñes visualmente (colores, tipografías)
+7. Documenta decisiones con trazabilidad al canvas`;
 
 async function readMemory(appId, file) {
   try {
@@ -291,6 +358,45 @@ export function register(program) {
         }, { token: opts.token, value: opts.value });
       } catch (e) {
         console.error('Error:', e.message);
+      }
+    });
+
+  // --- context ---
+  designCmd.command('context')
+    .description('Generate UX/UI design context document from a Value Proposition Canvas')
+    .requiredOption('--vpc <file>', 'Path to Value Proposition Canvas markdown file')
+    .option('-o, --output <file>', 'Output file path (default: design-context.md in same dir as VPC)')
+    .action(async (opts) => {
+      try {
+        const vpcPath = path.resolve(opts.vpc);
+        const outputPath = opts.output || path.join(path.dirname(vpcPath), 'design-context.md');
+
+        // Read VPC
+        const vpcContent = await fs.readFile(vpcPath, 'utf8');
+
+        console.log(`═══ Design Context Generator ═══`);
+        console.log(`VPC: ${vpcPath} (${vpcContent.length} bytes)`);
+        console.log(`Output: ${outputPath}`);
+        console.log('');
+        console.log(DESIGN_CONTEXT_SYSTEM_PROMPT);
+        console.log('');
+        console.log('─── VALUE PROPOSITION CANVAS ───');
+        console.log('');
+        console.log(vpcContent);
+        console.log('');
+        console.log('─── INSTRUCTIONS ───');
+        console.log('');
+        console.log('You are the AI agent executing this command. Your task:');
+        console.log('');
+        console.log('1. Read the System Prompt (Senior Product Designer role) above');
+        console.log('2. Read the Value Proposition Canvas above');
+        console.log('3. Generate the full design context document following all 11 sections');
+        console.log(`4. Save the output to: ${outputPath}`);
+        console.log('');
+        console.log('The output must be a complete, standalone markdown document ready for a UX/UI designer agent to consume.');
+      } catch (e) {
+        console.error('❌ Error:', e.message);
+        process.exit(1);
       }
     });
 }
