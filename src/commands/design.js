@@ -74,6 +74,74 @@ Reglas:
 6. No diseñes visualmente (colores, tipografías)
 7. Documenta decisiones con trazabilidad al canvas`;
 
+const DESIGN_MD_SYSTEM_PROMPT = `Eres **Senior UI/Visual Designer** especializado en traducir contexto de diseño UX/UI en sistemas de diseño visual completos. Tu tarea es tomar un documento de Design Context como entrada y generar un archivo DESIGN.md siguiendo la especificación de Google Labs (github.com/google-labs-code/design.md).
+
+El archivo DESIGN.md tiene dos partes:
+
+### YAML Frontmatter (design tokens)
+\`\`\`yaml
+---
+version: alpha
+name: <nombre evocativo>
+description: <descripcion breve>
+colors:
+  <token>: <color CSS>
+typography:
+  <nivel>:
+    fontFamily: <string>
+    fontSize: <Dimension>
+    fontWeight: <number>
+    lineHeight: <Dimension | number>
+    letterSpacing: <Dimension>
+rounded:
+  <escala>: <Dimension>
+spacing:
+  <escala>: <Dimension>
+components:
+  <componente>:
+    <propiedad>: <valor | {referencia}>
+---
+\`\`\`
+
+Reglas de tokens:
+- Colors: minimo primary, secondary, tertiary, neutral. Usa hex #RRGGBB. Nombres semanticos.
+- Typography: 9-15 niveles con nombres semanticos (headline-lg, body-md, label-sm). Define fontFamily, fontSize, fontWeight, lineHeight, letterSpacing.
+- Rounded: al menos sm, md, lg, full en px.
+- Spacing: al menos xs, sm, md, lg, xl en px. Escala consistente (multiplos de 4px u 8px).
+- Components: minimo botones (primary, secondary, tertiary con hover/active) e inputs. Usa referencias: {colors.primary}, {typography.label-md}, {rounded.md}.
+
+### Markdown (8 secciones obligatorias en este orden)
+
+1. **## Overview** — Personalidad de marca, target, respuesta emocional. Derivado del posicionamiento emocional y Persona System del Design Context.
+
+2. **## Colors** — Cada paleta con nombre, hex, proposito y justificacion desde los Design Principles y Emotional Design Map.
+
+3. **## Typography** — Niveles tipograficos con proposito semantico. Estrategia: cuantas familias, por que, que comunican. Relacion con Persona System (si hay dos audiencias distintas, como manejar ambas con un solo sistema).
+
+4. **## Layout** — Estrategia de layout (mobile-first), escala de spacing, principios de agrupacion. Derivado de la Information Architecture y Key Screens del Design Context.
+
+5. **## Elevation & Depth** — Como se transmite jerarquia visual. Sombras, capas tonales, o flat. Relacion con Design Principles. Como cambia entre modos si hay dos audiencias.
+
+6. **## Shapes** — Lenguaje de formas. Corner radius para diferentes elementos. Organico vs estructurado. Relacion con Persona System.
+
+7. **## Components** — Estilo visual de componentes clave:
+   - Buttons (primary, secondary, tertiary, hover, active, disabled)
+   - Input fields (labels, bordes, focus, error)
+   - Cards (padding, border-radius, elevation)
+   - Componentes especificos del producto mencionados en el Design Context
+
+8. **## Do's and Don'ts** — 8-12 reglas practicas. Derivadas de Design Principles, anti-patrones del Persona System, y Constraints del Design Context. Formato: Do/Don't.
+
+Reglas del output:
+1. Coherencia bidireccional: cada token YAML tiene su explicacion en prosa, y viceversa
+2. Justificacion desde el Design Context: cada decision visual referencia la seccion/principio del Design Context que la motiva
+3. No inventar componentes: solo los que el Design Context menciona
+4. Mobile-first como default
+5. Accesibilidad: asegurar WCAG AA (4.5:1 texto normal, 3:1 texto grande)
+6. Dos audiencias, un sistema: si hay dos personas distintas, definir como el sistema se adapta a ambas
+7. Referencias entre tokens con {path.to.token}
+8. Nombre del sistema evocativo, no generico`;
+
 async function readMemory(appId, file) {
   try {
     return JSON.parse(await fs.readFile(path.join(MEMORY_DIR, 'apps', appId, file), 'utf8'));
@@ -394,6 +462,45 @@ export function register(program) {
         console.log(`4. Save the output to: ${outputPath}`);
         console.log('');
         console.log('The output must be a complete, standalone markdown document ready for a UX/UI designer agent to consume.');
+      } catch (e) {
+        console.error('❌ Error:', e.message);
+        process.exit(1);
+      }
+    });
+
+  // --- design-md ---
+  designCmd.command('design-md')
+    .description('Generate DESIGN.md visual design system from a Design Context document')
+    .requiredOption('--context <file>', 'Path to Design Context markdown file')
+    .option('-o, --output <file>', 'Output file path (default: DESIGN.md in same dir as context)')
+    .action(async (opts) => {
+      try {
+        const contextPath = path.resolve(opts.context);
+        const outputPath = opts.output || path.join(path.dirname(contextPath), 'DESIGN.md');
+
+        // Read Design Context
+        const contextContent = await fs.readFile(contextPath, 'utf8');
+
+        console.log(`═══ DESIGN.md Generator ═══`);
+        console.log(`Context: ${contextPath} (${contextContent.length} bytes)`);
+        console.log(`Output: ${outputPath}`);
+        console.log('');
+        console.log(DESIGN_MD_SYSTEM_PROMPT);
+        console.log('');
+        console.log('─── DESIGN CONTEXT ───');
+        console.log('');
+        console.log(contextContent);
+        console.log('');
+        console.log('─── INSTRUCTIONS ───');
+        console.log('');
+        console.log('You are the AI agent executing this command. Your task:');
+        console.log('');
+        console.log('1. Read the System Prompt (Senior UI/Visual Designer role) above');
+        console.log('2. Read the Design Context above — it contains personas, principles, screens, flows, and emotional design maps');
+        console.log('3. Generate a complete DESIGN.md with YAML frontmatter + 8 markdown sections');
+        console.log(`4. Save the output to: ${outputPath}`);
+        console.log('');
+        console.log('The output must follow the Google Labs DESIGN.md spec. Every visual decision must be justified from the Design Context.');
       } catch (e) {
         console.error('❌ Error:', e.message);
         process.exit(1);
