@@ -49,7 +49,7 @@ zea orchestrate "Importá este Excel" --ws
 
 ```bash
 zea orchestrate --domain venture "..."    # Venture Capital / Private Equity
-zea orchestrate --domain psycho "..."     # Psicopedagogía
+zea orchestrate --domain psp "..."        # Psicopedagogía
 zea orchestrate --domain sports "..."     # Deportes
 ```
 

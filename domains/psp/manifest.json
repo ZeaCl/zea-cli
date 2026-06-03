@@ -1,0 +1,12 @@
+{
+  "name": "psp",
+  "label": "Psicopedagogía",
+  "api_prefix": "pp",
+  "api_port": 4083,
+  "app_id": "psp_familiar",
+  "app_url": "psp.zea.localhost",
+  "auth_required": true,
+  "out_of_scope_suggestions": ["rutinas", "sesiones", "evaluaciones", "progreso", "desafios", "regulacion", "gamificacion"],
+  "entities": "families, children, sessions, routines, progress_metrics, challenges, emotional_states, rewards",
+  "expert_types": ["db", "api", "screen", "infra", "data-import"]
+}

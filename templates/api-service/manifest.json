@@ -3,13 +3,13 @@
   "description": "Generates a complete Phoenix/Elixir API service from an Open Spec requirements document. Includes controller, router, endpoint, Dockerfile, docker-compose entry, Caddy route, and SQL schema.",
   "version": "1.0.0",
   "placeholders": {
-    "APP_NAME": {"type": "string", "example": "psycho_api"},
+    "APP_NAME": {"type": "string", "example": "psp_api"},
     "APP_MODULE": {"type": "string", "example": "PsychoApi"},
     "API_PREFIX": {"type": "string", "example": "pp"},
     "API_PORT": {"type": "integer", "example": 4083},
-    "DOMAIN_NAME": {"type": "string", "example": "psycho"},
+    "DOMAIN_NAME": {"type": "string", "example": "psp"},
     "DOMAIN_LABEL": {"type": "string", "example": "Psicopedagogía"},
-    "DB_NAME": {"type": "string", "example": "psycho_prod"},
+    "DB_NAME": {"type": "string", "example": "psp_prod"},
     "ENTITIES_JSON": {"type": "json_array", "example": "[{\"name\":\"patients\",\"fields\":[...]}]"}
   },
   "files_generated": [

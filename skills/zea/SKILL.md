@@ -83,7 +83,7 @@ ZEA soporta múltiples dominios de negocio. Cada dominio tiene su propio schema 
 
 ```bash
 zea orchestrate --domain venture "..."   # Venture Capital
-zea orchestrate --domain psycho "..."    # Psicopedagogía
+zea orchestrate --domain psp "..."    # Psicopedagogía
 zea orchestrate --domain sports "..."    # Deportes
 ```
 

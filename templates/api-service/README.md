@@ -5,16 +5,16 @@ Este template genera una API service completa (como venture-api) para un dominio
 
 ## Placeholders (el builder-expert los reemplaza)
 
-| Placeholder | Descripción | Ejemplo (psycho) | Ejemplo (sports) |
+| Placeholder | Descripción | Ejemplo (psp) | Ejemplo (sports) |
 |---|---|---|---|
-| `{{APP_NAME}}` | Nombre del proyecto Mix (snake_case) | `psycho_api` | `sports_api` |
-| `{{APP_MODULE}}` | Nombre del módulo Elixir (PascalCase) | `PsychoApi` | `SportsApi` |
+| `{{APP_NAME}}` | Nombre del proyecto Mix (snake_case) | `psp_api` | `sports_api` |
+| `{{APP_MODULE}}` | Nombre del módulo Elixir (PascalCase) | `PspApi` | `SportsApi` |
 | `{{API_PREFIX}}` | Prefijo de las rutas HTTP | `pp` | `sp` |
 | `{{API_PORT}}` | Puerto del servicio | `4083` | `4084` |
-| `{{DOMAIN_NAME}}` | Nombre del dominio | `psycho` | `sports` |
+| `{{DOMAIN_NAME}}` | Nombre del dominio | `psp` | `sports` |
 | `{{DOMAIN_LABEL}}` | Etiqueta legible | `Psicopedagogía` | `Deportes` |
-| `{{DB_NAME}}` | Nombre de la base de datos | `psycho_prod` | `sports_prod` |
-| `{{ENTITIES}}` | Lista de entidades (separadas por coma) | `patients,sessions,evaluations` | `teams,players,matches` |
+| `{{DB_NAME}}` | Nombre de la base de datos | `psp_prod` | `sports_prod` |
+| `{{ENTITIES}}` | Lista de entidades (separadas por coma) | `families,children,sessions` | `teams,players,matches` |
 
 ## Estructura de archivos generados
 
