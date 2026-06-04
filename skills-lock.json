@@ -67,6 +67,12 @@
       "skillPath": "skills/venture/SKILL.md",
       "computedHash": "pending"
     },
+    "domain": {
+      "source": "ZeaCl/zea-agent-skill",
+      "sourceType": "github",
+      "skillPath": "skills/domain/SKILL.md",
+      "computedHash": "pending"
+    },
     "zea_ops": {
       "source": "ZeaCl/zea-agent-skill",
       "sourceType": "github",

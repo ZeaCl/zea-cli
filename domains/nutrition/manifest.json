@@ -1,0 +1,16 @@
+{
+  "name": "nutrition",
+  "label": "Nutrition & Health",
+  "api_prefix": "nt",
+  "api_port": 4085,
+  "app_id": "nutrisnaps",
+  "app_url": "nutrisnaps.zea.localhost",
+  "auth_required": true,
+  "out_of_scope_suggestions": [
+    "comidas", "nutrientes", "calorías", "hidratación", "progreso",
+    "suscripción", "perfil nutricional", "análisis de alimentos",
+    "objetivos", "dieta", "escáner de comida", "macros"
+  ],
+  "entities": "profiles,meals,daily_records,hydration_records,subscriptions,goals,notification_settings",
+  "expert_types": ["db", "api", "screen", "infra", "builder", "data-import"]
+}

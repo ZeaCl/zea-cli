@@ -1,0 +1,61 @@
+{
+  "skill_name": "domain",
+  "description": "Validates that the domain skill correctly guides AI agents through creating, scaffolding, and validating ZEA domains.",
+  "evals": [
+    {
+      "id": 1,
+      "eval_name": "create-domain-from-specs",
+      "prompt": "Crea un dominio nuevo llamado 'education' en ZEA Platform. Usa el spec en ./spec/education/requirements.md y ./spec/education/design.md. El prefijo API debe ser 'ed', puerto 4086, label 'Education & Learning', app-id 'edulearn'. Las entidades detectadas automáticamente deben aceptarse todas.",
+      "expected_output": "El agente debe usar `zea domain init education --spec requirements.md --design-spec design.md --label 'Education & Learning' --api-prefix ed --api-port 4086 --app-id edulearn --yes`. Luego `zea domain scaffold education --layer tests`, `--layer api`, `--layer db`. Finalmente sugerir `zea domain pipeline education`.",
+      "check_commands": [
+        "domain init education",
+        "domain scaffold education --layer tests",
+        "domain scaffold education --layer api",
+        "domain scaffold education --layer db",
+        "domain pipeline education"
+      ],
+      "assertions": [
+        {"type": "command_used", "value": "zea domain init"},
+        {"type": "command_used", "value": "--yes"},
+        {"type": "command_used", "value": "scaffold --layer tests"},
+        {"type": "command_used", "value": "scaffold --layer api"},
+        {"type": "command_used", "value": "scaffold --layer db"},
+        {"type": "output_contains", "value": "RED"}
+      ],
+      "files": []
+    },
+    {
+      "id": 2,
+      "eval_name": "tdd-flow-validation",
+      "prompt": "Necesito validar que el dominio nutrition que creamos antes esté funcionando. Los tests deberían fallar porque los controllers son stubs. Quiero ver el pipeline de validate mostrando el estado RED.",
+      "expected_output": "El agente debe usar `zea domain pipeline nutrition --from compile --to test` o `zea domain pipeline nutrition --step test`. Debe mostrar el output con los tests fallando (ej: '19 passed, 40 failed, 59 total'). Debe explicar que esto es el estado RED esperado en TDD.",
+      "check_commands": [
+        "domain pipeline nutrition --step test"
+      ],
+      "assertions": [
+        {"type": "command_used", "value": "domain pipeline"},
+        {"type": "command_used", "value": "--step test"},
+        {"type": "output_contains", "value": "failed"},
+        {"type": "output_contains", "value": "passed"}
+      ],
+      "files": []
+    },
+    {
+      "id": 3,
+      "eval_name": "extend-domain-with-table",
+      "prompt": "Agrégale al dominio nutrition una tabla nueva 'food_catalog' con los campos: name (VARCHAR 255, not null), category (VARCHAR 100), calories_per_100g (FLOAT), proteins_per_100g (FLOAT), carbs_per_100g (FLOAT), fats_per_100g (FLOAT). Después generame el endpoint GET /nt/food-catalog.",
+      "expected_output": "El agente debe usar `zea nutrition data add-table --name food_catalog --fields '[...]'`. Luego debe sugerir `zea nutrition api add-endpoint --method GET --path '/nt/food-catalog' --handler 'list_food_catalog'`.",
+      "check_commands": [
+        "nutrition data add-table",
+        "nutrition api add-endpoint"
+      ],
+      "assertions": [
+        {"type": "command_used", "value": "nutrition data add-table"},
+        {"type": "command_used", "value": "--fields"},
+        {"type": "command_used", "value": "nutrition api add-endpoint"},
+        {"type": "output_contains", "value": "food_catalog"}
+      ],
+      "files": []
+    }
+  ]
+}
