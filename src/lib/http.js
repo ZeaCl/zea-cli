@@ -13,6 +13,29 @@ import https from 'https';
 import { URL } from 'url';
 
 export function zeaFetch(url, options = {}) {
+  if (process.env.MOCK_STITCH_API === 'true' && url.includes('stitch.googleapis.com/mcp')) {
+    return Promise.resolve({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        result: {
+          content: [
+            {
+              text: JSON.stringify({
+                screens: [
+                  { name: 'projects/123/screens/dashboard', title: 'Dashboard Sudlich' },
+                  { name: 'projects/123/screens/funds_list', title: 'Lista de Fondos' },
+                  { name: 'projects/123/screens/capital_call', title: 'Llamado de Capital' }
+                ]
+              })
+            }
+          ]
+        }
+      }),
+      text: async () => ''
+    });
+  }
+
   return new Promise((resolve, reject) => {
     const parsed = new URL(url);
     const isHttps = parsed.protocol === 'https:';

@@ -7,33 +7,88 @@ const DEEPSEEK_MODEL = 'deepseek-chat';
 const DEEPSEEK_KEY = process.env.DEEPSEEK_API_KEY || process.env.DEEPSEEK_API_KEYS;
 
 const API_CATALOG = {
-  'GET /gp/dashboard': {
-    description: 'Dashboard KPIs del General Partner',
-    returns: { active_funds: 'int — cantidad de fondos activos', active_lps: 'int — cantidad de LPs activos', aum: 'string — Assets Under Management formateado', pending_capital_calls: 'int — capital calls pendientes', total_called: 'string — total llamado', total_paid: 'string — total pagado' }
+  venture: {
+    'GET /gp/dashboard': {
+      description: 'Dashboard KPIs del General Partner',
+      returns: { active_funds: 'int', active_lps: 'int', aum: 'string', pending_capital_calls: 'int', total_called: 'string', total_paid: 'string' }
+    },
+    'GET /gp/funds': {
+      description: 'Lista de fondos',
+      returns: '[{ id, name, type, status, total_size, currency, created_at }]'
+    },
+    'GET /gp/investors': {
+      description: 'Lista de inversores',
+      returns: '[{ id, name, email, investor_type, is_active }]'
+    },
+    'GET /gp/capital-calls': {
+      description: 'Lista de capital calls',
+      returns: '[{ id, fund_name, call_number, total_amount, status, issue_date, due_date }]'
+    },
+    'POST /gp/funds': { description: 'Crear fondo', body: '{ name, type, total_size, currency }' },
+    'POST /gp/investors': { description: 'Registrar inversor', body: '{ name, email, investor_type }' },
+    'POST /gp/capital-calls': { description: 'Crear capital call', body: '{ fund_id, total_amount, issue_date, due_date }' }
   },
-  'GET /gp/funds': {
-    description: 'Lista de fondos del GP',
-    returns: '[{ id: "uuid", name: "string", type: "VENTURE_CAPITAL|REAL_ESTATE|PRIVATE_EQUITY|HEDGE_FUND", status: "DRAFT|FUNDRAISING|ACTIVE|INVESTING|HARVESTING|LIQUIDATED|WIND_DOWN|CLOSED", total_size: "int (cents)", currency: "USD|CLP", created_at: "ISO date" }]'
-  },
-  'GET /gp/investors': {
-    description: 'Lista de inversores (LPs)',
-    returns: '[{ id: "uuid", name: "string", email: "string", investor_type: "INDIVIDUAL|INSTITUTIONAL|CORPORATE|FAMILY_OFFICE", is_active: "bool", created_at: "ISO date" }]'
-  },
-  'GET /gp/capital-calls': {
-    description: 'Lista de capital calls',
-    returns: '[{ id: "uuid", fund_name: "string", call_number: "int", total_amount: "int (cents)", currency: "string", status: "DRAFT|PENDING|SENT|PARTIALLY_PAID|PAID|OVERDUE|CANCELLED", issue_date: "ISO date", due_date: "ISO date" }]'
-  },
-  'POST /gp/funds': {
-    description: 'Crear un fondo nuevo',
-    body: '{ name: "string (required)", type: "VENTURE_CAPITAL|REAL_ESTATE|PRIVATE_EQUITY|HEDGE_FUND", total_size: "int (cents)", currency: "USD|CLP", status: "DRAFT|FUNDRAISING|ACTIVE" }'
-  },
-  'POST /gp/investors': {
-    description: 'Registrar un nuevo inversor',
-    body: '{ name: "string (required)", email: "string (required)", investor_type: "INDIVIDUAL|INSTITUTIONAL|CORPORATE|FAMILY_OFFICE", is_qualified_investor: "bool" }'
-  },
-  'POST /gp/capital-calls': {
-    description: 'Crear un capital call',
-    body: '{ fund_id: "uuid (required)", total_amount: "int (cents)", issue_date: "ISO date", due_date: "ISO date", call_number: "int" }'
+  psp: {
+    'GET /pp/routines/today': {
+      description: 'Plan del día con actividades',
+      params: '?child_id=X',
+      returns: '{ routine_id, child_id, date, greeting, plan: [{ module, icon, duration_min, is_challenge, status }] }'
+    },
+    'POST /pp/sessions/start': {
+      description: 'Iniciar sesión de aprendizaje',
+      body: '{ child_id, routine_id }',
+      returns: '{ session_id, child_id, status, current_phase, phases: [{ phase_order, phase_type, duration_min, status }], total_progress_pct }'
+    },
+    'GET /pp/sessions/:id': {
+      description: 'Estado actual de sesión',
+      returns: '{ session_id, status, current_phase, phases[], streak }'
+    },
+    'POST /pp/sessions/:id/phases/:p/complete': {
+      description: 'Completar fase de sesión',
+      body: '{ score }',
+      returns: '{ session_id, current_phase, phases[], status, total_score }'
+    },
+    'GET /pp/progress/weekly': {
+      description: 'Dashboard semanal con métricas y módulos',
+      params: '?child_id=X',
+      returns: '{ child_id, week, sessions_completed, sessions_total, streak, metrics: { attention_pct, attention_trend, dispersion_pct }, avg_score, modules: [{ module_id, name, icon, score, sessions }], daily: [{ day, completed, score }], message, recommendation }'
+    },
+    'GET /pp/progress/monthly': {
+      description: 'Resumen mensual',
+      params: '?child_id=X',
+      returns: '{ child_id, month, year, sessions_completed, avg_score }'
+    },
+    'GET /pp/progress/streak': {
+      description: 'Racha actual del niño',
+      params: '?child_id=X',
+      returns: '{ child_id, current_streak, longest_streak, last_session_date }'
+    },
+    'GET /pp/rewards/:child_id': {
+      description: 'Estado de gamificación',
+      returns: '{ child_id, stars, seeds, chest: { current, to_fill, filled, pct }, stage: { name, emoji, number }, next_stage }'
+    },
+    'GET /pp/calm/exercises': {
+      description: 'Ejercicios de respiración y calma',
+      returns: '[{ id, name, slug, description, duration_min, icon, audience }]'
+    },
+    'POST /pp/emotional-states': {
+      description: 'Registrar estado emocional',
+      body: '{ recorded_by, mood, context, organization_id, family_id, parent_id, child_id, session_id }',
+      returns: '{ id, mood, recorded_at }'
+    },
+    'GET /pp/families/:id': {
+      description: 'Datos de la familia',
+      returns: '{ id, name, status, parents: [{ id, name, role }], children: [{ id, name, age, avatar, active_modules }] }'
+    },
+    'GET /pp/children/:id': {
+      description: 'Perfil del niño',
+      returns: '{ id, name, age, avatar, accessibility_mode, active_modules, status, streak, rewards }'
+    },
+    'PATCH /pp/children/:id': {
+      description: 'Actualizar perfil del niño',
+      body: '{ active_modules, accessibility_mode, name, status }',
+      returns: '{ id, name, active_modules, accessibility_mode }'
+    }
   }
 };
 
@@ -161,10 +216,11 @@ export function register(program) {
 
   // ─── analyze ───────────────────────────────────────────
   screenCmd.command('analyze')
-    .description('Analyze a StitchedScreen HTML (--llm for AI-powered, or regex by default)')
+    .description('Analyze a StitchedScreen HTML and map components to domain APIs')
     .requiredOption('--app <id>', 'App ID')
     .requiredOption('--screen <name>', 'Screen state name')
-    .option('--llm', 'Use DeepSeek LLM for semantic analysis')
+    .option('--domain <domain>', 'Domain for API catalog (venture, psp)', 'venture')
+    .option('--json', 'Output as JSON')
     .action(async (opts) => {
       try {
         const client = await getClient();
@@ -176,48 +232,48 @@ export function register(program) {
         if (state.type !== 'StitchedScreen') throw new Error(`State is type '${state.type}', not StitchedScreen`);
 
         const html = state.html || '';
+        const domain = opts.domain || manifest.domain_auth || 'venture';
+        const catalog = API_CATALOG[domain] || API_CATALOG['venture'];
 
-        if (opts.llm) {
-          console.log(`\n${chalk.bold('LLM Analysis:')} ${opts.screen} (${html.length} bytes)\n`);
-          const userPrompt = `Analizá esta pantalla Stitch:\n\nTITLE: ${opts.screen}\nHTML (${html.length} bytes):\n${html.slice(0, 10000)}`;
-          const analysis = await callLLM(SYSTEM_PROMPT, userPrompt);
-
-          console.log(`${chalk.cyan('Type:')} ${analysis.type} (confidence: ${(analysis.confidence * 100).toFixed(0)}%)`);
-          console.log(`${chalk.dim('Reasoning:')} ${analysis.reasoning}\n`);
-
-          console.log(`${chalk.cyan('Components:')}`);
-          for (const c of analysis.components || []) {
-            const icon = c.type === 'kpi' ? '📊' : c.type === 'table' ? '📋' : c.type === 'button' ? '🔘' : c.type === 'chart' ? '📈' : c.type === 'form' ? '📝' : '📌';
-            console.log(`  ${icon} ${c.label}`);
-            console.log(`     data-zea-bind="${c.data_bind}"  ← ${c.api_endpoint}.${c.api_field}`);
-            if (c.column_bindings?.length) console.log(`     columns: ${c.column_bindings.join(', ')}`);
-          }
-
-          console.log(`\n${chalk.cyan('Suggested Intents (${analysis.suggested_intents?.length || 0}):')}`);
-          for (const i of analysis.suggested_intents || []) {
-            console.log(`  → ${i.name}: ${i.type} ${i.endpoint || ''} → ${i.target_state}`);
-            if (i.data_mapping) console.log(`     mapping: ${JSON.stringify(i.data_mapping)}`);
-          }
-
-          console.log(`\n${chalk.cyan('Injection Points (${analysis.injection_points?.length || 0}):')}`);
-          for (const ip of analysis.injection_points || []) {
-            console.log(`  • "${ip.html_selector?.slice(0, 60)}" → data-zea-bind="${ip.data_bind}" (${ip.action})`);
-          }
-
-          console.log(`\nRun: ${chalk.green(`zea screen functionalize --app ${opts.app} --screen ${opts.screen} --llm`)}`);
-
-        } else {
-          // Regex fallback
-          console.log(`\n${chalk.bold('Regex Analysis:')} ${opts.screen} (${html.length} bytes)\n`);
-          const a = analyzeRegex(html);
-          console.log(`${chalk.cyan('Type:')} ${a.screenType}`);
-          console.log(`  KPI: ${a.hasKPIs ? '✅' : '❌'} | Table: ${a.hasTable ? '✅' : '❌'} | Form: ${a.hasForm ? '✅' : '❌'} | Chart: ${a.hasChart ? '✅' : '❌'}`);
-          const spans = (html.match(/<span[^>]*>([^<]+)<\/span>/gi) || []).map(s => s.replace(/<[^>]+>/g, '')).filter(v => v.trim() && v.length < 60);
-          console.log(`\n${chalk.cyan('Static values:')}`);
-          [...new Set(spans)].slice(0, 15).forEach(v => console.log(`  "${v.trim()}"`));
-          console.log(`\nRun: ${chalk.green(`zea screen functionalize --app ${opts.app} --screen ${opts.screen}`)}`);
-          console.log(`${chalk.dim('Tip: use --llm for AI-powered semantic analysis')}`);
+        console.log(`═══ Screen Analysis ═══`);
+        console.log(`App: ${opts.app} | Screen: ${opts.screen} | Domain: ${domain}`);
+        console.log(`HTML: ${html.length} bytes`);
+        console.log('');
+        console.log('You are the AI agent executing this command. Analyze the screen HTML below.');
+        console.log('');
+        console.log('## Step 1: Identify Components');
+        console.log('Scan the HTML and list every dynamic element:');
+        console.log('- Numbers/scores that change (KPIs, metrics)');
+        console.log('- Text that varies (names, messages, recommendations)');
+        console.log('- Lists/tables that repeat (modules, items, rows)');
+        console.log('- Progress bars, charts, status indicators');
+        console.log('- Navigation elements (tabs, buttons, links)');
+        console.log('For each: note the static value and suggest a data-zea-bind name.');
+        console.log('');
+        console.log('## Step 2: Map to Domain API');
+        console.log('Available APIs for domain "' + domain + '":');
+        console.log('');
+        for (const [endpoint, info] of Object.entries(catalog)) {
+          console.log(`  ${endpoint}`);
+          if (info.description) console.log(`    ${info.description}`);
+          if (info.returns) console.log(`    Returns: ${JSON.stringify(info.returns)}`);
+          console.log('');
         }
+        console.log('## Step 3: Gap Report');
+        console.log('For each component:');
+        console.log('  ✅ If API has the field → map it with data-zea-bind');
+        console.log('  ❌ If no API provides this data → flag as GAP');
+        console.log('');
+        console.log('Output format:');
+        console.log('```');
+        console.log('| # | Component | Static Value | data-zea-bind | API Endpoint | API Field | Status |');
+        console.log('|---|-----------|-------------|---------------|-------------|-----------|--------|');
+        console.log('| 1 | Score 8.8 | 8.8 | avg_score | GET /pp/progress/weekly | avg_score | ✅ |');
+        console.log('```');
+        console.log('');
+        console.log('─── SCREEN HTML ───');
+        console.log('');
+        console.log(html);
 
       } catch (e) {
         console.error('Error:', e.message);
