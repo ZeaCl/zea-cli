@@ -131,18 +131,18 @@ end
 
     test "GET /${prefix}/${entityPath} returns empty list when no records", %{conn: conn} do
       conn = get(conn, "/${prefix}/${entityPath}")
-      assert conn.status in [200, 401]
+      assert conn.status == 401
     end
 
     test "POST /${prefix}/${entityPath} creates a record", %{conn: conn} do
       conn = post(conn, "/${prefix}/${entityPath}", %{})
       # Will return 401 without auth, or 201 with auth
-      assert conn.status in [201, 401, 400]
+      assert conn.status == 401
     end
 
     test "GET /${prefix}/${entityPath}/:id returns 404 for non-existent", %{conn: conn} do
       conn = get(conn, "/${prefix}/${entityPath}/00000000-0000-0000-0000-000000000000")
-      assert conn.status in [404, 401]
+      assert conn.status == 401
     end
 
     test "PUT /${prefix}/${entityPath}/:id returns 401 without auth", %{conn: conn} do
@@ -334,6 +334,8 @@ end
 
   plug(:match)
   plug(Plug.Parsers, parsers: [:json], pass: ["*/*"], json_decoder: Jason)
+  plug JWTAuthPlug
+  plug ScopingPlug
   plug(:dispatch)
 
   # Health
@@ -343,7 +345,6 @@ end
     |> send_resp(200, Jason.encode!(%{status: "ok"}))
   end
 
-  # Auth plugs (applied per-route)
   # Each route below wraps JWTAuthPlug + ScopingPlug
 ${routes}
 
@@ -405,6 +406,9 @@ end
   import Plug.Conn
 
   def init(opts), do: opts
+
+  def call(%{halted: true} = conn, _opts), do: conn
+  def call(%{state: :sent} = conn, _opts), do: conn
 
   def call(conn, _opts) do
     case get_req_header(conn, "authorization") do
