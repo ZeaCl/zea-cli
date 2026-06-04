@@ -1,10 +1,33 @@
 import zeaFetch from '../lib/http.js';
 import { getClient } from '../client.js';
-import chalk from 'chalk';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const DOMAINS_DIR = path.join(__dirname, '..', '..', 'domains');
 
 const DEEPSEEK_API = 'https://api.deepseek.com/v1/chat/completions';
 const DEEPSEEK_MODEL = 'deepseek-chat';
 const DEEPSEEK_KEY = process.env.DEEPSEEK_API_KEY || process.env.DEEPSEEK_API_KEYS;
+
+let API_CATALOG_CACHE = {};
+
+function loadApiCatalog(domain) {
+  if (API_CATALOG_CACHE[domain]) return API_CATALOG_CACHE[domain];
+  
+  // Try domain-specific file first
+  const catalogPath = path.join(DOMAINS_DIR, domain, 'api-catalog.json');
+  if (fs.existsSync(catalogPath)) {
+    const catalog = JSON.parse(fs.readFileSync(catalogPath, 'utf8'));
+    API_CATALOG_CACHE[domain] = catalog;
+    return catalog;
+  }
+  
+  // Fallback to hardcoded catalogs
+  return API_CATALOG[domain] || API_CATALOG['venture'];
+}
 
 const API_CATALOG = {
   venture: {
@@ -233,7 +256,7 @@ export function register(program) {
 
         const html = state.html || '';
         const domain = opts.domain || manifest.domain_auth || 'venture';
-        const catalog = API_CATALOG[domain] || API_CATALOG['venture'];
+        const catalog = loadApiCatalog(domain);
 
         console.log(`═══ Screen Analysis ═══`);
         console.log(`App: ${opts.app} | Screen: ${opts.screen} | Domain: ${domain}`);
@@ -659,6 +682,34 @@ Devolvé SOLO este JSON:
       } catch (e) {
         console.error('Error:', e.message);
       }
+    });
+
+  // ─── api-catalog ───────────────────────────────────────
+  screenCmd.command('api-catalog')
+    .description('Show or manage the API catalog for a domain')
+    .option('--domain <domain>', 'Domain name (venture, psp)', 'psp')
+    .option('--format <format>', 'Output format: table, json', 'table')
+    .action(async (opts) => {
+      const catalog = loadApiCatalog(opts.domain);
+      
+      if (opts.format === 'json') {
+        console.log(JSON.stringify(catalog, null, 2));
+        return;
+      }
+
+      console.log(`API Catalog — ${opts.domain} (${Object.keys(catalog).length} endpoints)\n`);
+      
+      for (const [endpoint, info] of Object.entries(catalog)) {
+        const method = endpoint.split(' ')[0];
+        const methodColor = method === 'GET' ? '🟢' : method === 'POST' ? '🔵' : method === 'PATCH' ? '🟡' : '⚪';
+        console.log(`${methodColor} ${endpoint}`);
+        if (info.description) console.log(`   ${info.description}`);
+        if (info.returns) console.log(`   → ${info.returns}`);
+        console.log('');
+      }
+
+      console.log(`Catalog file: domains/${opts.domain}/api-catalog.json`);
+      console.log(`Add endpoints: edit that file and re-run.`);
     });
 
 }
