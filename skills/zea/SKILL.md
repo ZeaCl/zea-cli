@@ -7,7 +7,7 @@ description: "ZEA Platform — CLI, API Gateway y skills para agentes de código
 
 Skill principal de ZEA Platform. Documenta todos los skills, CLI commands, API Gateway, y arquitectura multi-dominio.
 
-## 🧱 Skills disponibles (17)
+## 🧱 Skills disponibles (18)
 
 | Skill | CLI | Descripción |
 |---|---|---|
@@ -16,6 +16,7 @@ Skill principal de ZEA Platform. Documenta todos los skills, CLI commands, API G
 | design | `zea design` | Diseño: importar screens Stitch, cambiar colores |
 | venture | `zea venture` | Venture: fondos, investors, capital calls, data |
 | sdui | `zea sdui` | Server-Driven UI: manifiestos, estados, intents |
+| **synapse** | `synapse` | Mensajería en tiempo real: chat, SDKs, integración |
 | doctor | `zea doctor` | Diagnóstico: health check de 7 capas |
 | agent | `zea agent` | Gestión de agentes Glia (legacy) |
 | workflow | `zea workflow` | Cerebelum Workflows: Human-in-the-Loop |
@@ -83,7 +84,7 @@ ZEA soporta múltiples dominios de negocio. Cada dominio tiene su propio schema 
 
 ```bash
 zea orchestrate --domain venture "..."   # Venture Capital
-zea orchestrate --domain psp "..."    # Psicopedagogía
+zea orchestrate --domain psycho "..."    # Psicopedagogía
 zea orchestrate --domain sports "..."    # Deportes
 ```
 
