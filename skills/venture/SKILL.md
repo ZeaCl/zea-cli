@@ -5,7 +5,25 @@ description: "Gestión de fondos de inversión: listar, crear, transicionar. Cap
 
 # Venture — Fund Management
 
-## Comandos
+## 🔐 Autenticación
+
+**IMPORTANTE**: Antes de cualquier comando, verificar que tengas token.
+
+```bash
+# 1. Revisar si hay token en variables de entorno
+echo "ZEA_TOKEN=${ZEA_TOKEN:-no definido}"
+echo "ZEA_PAT=${ZEA_PAT:-no definido}"
+
+# 2. Usar el primero que exista
+export ZEA_TOKEN="${ZEA_TOKEN:-$ZEA_PAT}"
+
+# 3. Si ninguno existe, NO puedo ejecutar comandos
+#    Pedir al usuario que configure ZEA_PAT en Thalamus agent_config
+```
+
+Si no hay token, responder: "No tengo token de acceso a ZEA Platform. Necesito que configures ZEA_PAT en mi agent_config en Thalamus."
+
+## Comandos CLI
 ```bash
 # Fondos
 zea venture fund list
@@ -27,11 +45,23 @@ zea venture investor add-commitment --investor <id> --fund <id> --amount 1000000
 zea venture dashboard
 ```
 
-## APIs internas
+## APIs (recomendado: usa curl, no el CLI)
 ```bash
-curl https://venture.zea.cl/gp/funds -H "Authorization: Bearer $ZEA_TOKEN" -H "x-zea-org-id: $ZEA_ORG_ID"
-curl https://venture.zea.cl/gp/capital-calls -H "Authorization: Bearer $ZEA_TOKEN" -H "x-zea-org-id: $ZEA_ORG_ID"
-curl https://venture.zea.cl/gp/investors -H "Authorization: Bearer $ZEA_TOKEN" -H "x-zea-org-id: $ZEA_ORG_ID"
+# Con token
+curl http://venture.zea.localhost/gp/funds \
+  -H "Authorization: Bearer ${ZEA_TOKEN}"
+
+curl http://venture.zea.localhost/gp/funds \
+  -H "Authorization: Bearer ${ZEA_TOKEN}"
+
+curl http://venture.zea.localhost/gp/investors \
+  -H "Authorization: Bearer ${ZEA_TOKEN}"
+
+curl http://venture.zea.localhost/gp/dashboard \
+  -H "Authorization: Bearer ${ZEA_TOKEN}"
+
+curl http://venture.zea.localhost/gp/capital-calls \
+  -H "Authorization: Bearer ${ZEA_TOKEN}"
 ```
 
 ## Error recovery
