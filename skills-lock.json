@@ -5,31 +5,31 @@
       "source": "ZeaCl/zea-agent-skill",
       "sourceType": "github",
       "skillPath": "skills/zea/SKILL.md",
-      "computedHash": "f69e6d0be51c4337d3bada769fe9896bf1a1cd6f9c05719b9375a0ab95d28e70"
+      "computedHash": "bc2804e0dbed4e21e631b08985663c64cac61dc9ad60c407c2d20869cdbc9a8f"
     },
     "sensor": {
       "source": "ZeaCl/zea-agent-skill",
       "sourceType": "github",
       "skillPath": "skills/sensor/SKILL.md",
-      "computedHash": "pending"
+      "computedHash": "9c8505cf2d58f80a299320fe06f43048f8221a8c4d761b701fe67dc05a3df252"
     },
     "design": {
       "source": "ZeaCl/zea-agent-skill",
       "sourceType": "github",
       "skillPath": "skills/design/SKILL.md",
-      "computedHash": "pending"
+      "computedHash": "64f58a0d1cd2eb3d784166a0354c9199d186b88d3266c517040ccee284e30c0d"
     },
     "glia": {
       "source": "ZeaCl/zea-agent-skill",
       "sourceType": "github",
       "skillPath": "skills/glia/SKILL.md",
-      "computedHash": "pending"
+      "computedHash": "1bd24fa124cc3db9e3a26c9b01b7a35dc558d8d43981c2bba5fa9e006ad2b01e"
     },
     "doctor": {
       "source": "ZeaCl/zea-agent-skill",
       "sourceType": "github",
       "skillPath": "skills/doctor/SKILL.md",
-      "computedHash": "pending"
+      "computedHash": "51fc837739ba90b3a71f15b5152ccfcabff4a2267306c63ce3e19e36976824db"
     },
     "gestion_fondos": {
       "source": "ZeaCl/zea-agent-skill",
@@ -47,13 +47,13 @@
       "source": "ZeaCl/zea-agent-skill",
       "sourceType": "github",
       "skillPath": "skills/orchestrate/SKILL.md",
-      "computedHash": "pending"
+      "computedHash": "66e5d42117864778b699d797f9e5672ada1c9a4161ff7507545d1678f0764499"
     },
     "sdui": {
       "source": "ZeaCl/zea-agent-skill",
       "sourceType": "github",
       "skillPath": "skills/sdui/SKILL.md",
-      "computedHash": "pending"
+      "computedHash": "86693536d2798a33ea425de940c81785b6c2f0f3c60fda5d2be288e28d1776af"
     },
     "sudlich": {
       "source": "ZeaCl/zea-agent-skill",
@@ -65,7 +65,7 @@
       "source": "ZeaCl/zea-agent-skill",
       "sourceType": "github",
       "skillPath": "skills/venture/SKILL.md",
-      "computedHash": "pending"
+      "computedHash": "2df47ce898dee194e721f01bf855c49497a89468ff165917ccb94f095a3a6da2"
     },
     "domain": {
       "source": "ZeaCl/zea-agent-skill",

@@ -12,29 +12,21 @@ import http from 'http';
 import https from 'https';
 import { URL } from 'url';
 
-export function zeaFetch(url, options = {}) {
-  if (process.env.MOCK_STITCH_API === 'true' && url.includes('stitch.googleapis.com/mcp')) {
-    return Promise.resolve({
-      ok: true,
-      status: 200,
-      json: async () => ({
-        result: {
-          content: [
-            {
-              text: JSON.stringify({
-                screens: [
-                  { name: 'projects/123/screens/dashboard', title: 'Dashboard Sudlich' },
-                  { name: 'projects/123/screens/funds_list', title: 'Lista de Fondos' },
-                  { name: 'projects/123/screens/capital_call', title: 'Llamado de Capital' }
-                ]
-              })
-            }
-          ]
-        }
-      }),
-      text: async () => ''
-    });
+export class ZeaError extends Error {
+  constructor(message, { status, code, url } = {}) {
+    super(message);
+    this.name = 'ZeaError';
+    this.status = status;
+    this.code = code;
+    this.url = url;
   }
+}
+
+const isDebug = () => process.argv.includes('--debug') || process.argv.includes('-d');
+
+export function zeaFetch(url, options = {}) {
+  const startTime = Date.now();
+  const method = options.method || 'GET';
 
   return new Promise((resolve, reject) => {
     const parsed = new URL(url);
@@ -42,19 +34,36 @@ export function zeaFetch(url, options = {}) {
     const mod = isHttps ? https : http;
     const port = parsed.port || (isHttps ? 443 : 80);
 
+    // Resolve .zea.localhost → 127.0.0.1 without monkey-patching global DNS
+    const hostname = (parsed.hostname === 'zea.localhost' || parsed.hostname.endsWith('.zea.localhost'))
+      ? '127.0.0.1'
+      : parsed.hostname;
+
     const reqOptions = {
-      hostname: parsed.hostname,
+      hostname,
       port: port,
       path: parsed.pathname + parsed.search,
-      method: options.method || 'GET',
+      method: method,
       headers: options.headers || {},
       timeout: options.timeout || 30000
     };
+
+    if (isDebug()) {
+      const bodyPreview = options.body
+        ? (typeof options.body === 'string' ? options.body.slice(0, 200) : JSON.stringify(options.body).slice(0, 200))
+        : '';
+      console.error(`\x1b[2m[DEBUG] ${method} ${url}${bodyPreview ? '\n       body: ' + bodyPreview : ''}\x1b[0m`);
+    }
 
     const req = mod.request(reqOptions, (res) => {
       let data = '';
       res.on('data', chunk => data += chunk);
       res.on('end', () => {
+        const elapsed = Date.now() - startTime;
+        if (isDebug()) {
+          const icon = res.statusCode >= 200 && res.statusCode < 400 ? '✅' : '❌';
+          console.error(`\x1b[2m[DEBUG] ← ${icon} ${res.statusCode} (${elapsed}ms)${data ? ' body: ' + data.slice(0, 300) : ''}\x1b[0m`);
+        }
         resolve({
           ok: res.statusCode >= 200 && res.statusCode < 400,
           status: res.statusCode,
@@ -68,8 +77,14 @@ export function zeaFetch(url, options = {}) {
       });
     });
 
-    req.on('error', (e) => reject(new Error(`fetch failed: ${e.message}`)));
-    req.setTimeout(options.timeout || 30000, () => { req.destroy(); reject(new Error('timeout')); });
+    req.on('error', (e) => {
+      if (isDebug()) console.error(`\x1b[2m[DEBUG] ← ❌ ERROR: ${e.message}\x1b[0m`);
+      reject(new ZeaError(e.message, { code: e.code, url }));
+    });
+    req.setTimeout(options.timeout || 30000, () => {
+      req.destroy();
+      reject(new ZeaError('Request timed out', { code: 'ETIMEDOUT', url }));
+    });
 
     if (options.body) {
       if (typeof options.body === 'string') {

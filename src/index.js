@@ -3,32 +3,28 @@
 import { Command } from 'commander';
 import path from 'path';
 import fs from 'fs/promises';
+import { readFileSync } from 'fs';
 import { spawnSync } from 'child_process';
 import { env } from 'process';
 
-import { register as registerAuth } from './commands/auth.js';
-import { register as registerOrg } from './commands/org.js';
-import { register as registerToken } from './commands/token.js';
-import { register as registerConfig } from './commands/config.js';
-import { register as registerSession } from './commands/session.js';
-import { register as registerShell } from './commands/shell.js';
+const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 
 const program = new Command();
 
 program
   .name('zea')
-  .description('ZEA Core Platform CLI')
-  .version('2.0.0');
+  .description('ZEA Platform CLI — thin router for service CLIs')
+  .version(pkg.version)
+  .option('--output <format>', 'Output format: json, table, text', 'table')
+  .option('--debug', 'Show HTTP request/response details', false)
+  .option('--dry-run', 'Validate without executing (create/update/delete only)', false)
+  .option('--quiet', 'Suppress non-essential output', false)
+  .option('--no-color', 'Disable ANSI colors', false);
 
-// 1. Registramos comandos core transversales (Auth)
-registerAuth(program);
-registerOrg(program);
-registerToken(program);
-registerConfig(program);
-registerSession(program);
-registerShell(program);
+// ── Dynamic PATH Discovery ──────────────────────────────
+// Scans PATH for zea-<service> binaries and mounts them as subcommands.
+// Built-in commands have zero knowledge of any service — everything is delegated.
 
-// 2. Lógica de Delegación Dinámica (Dynamic PATH Discovery)
 async function getDynamicCommands() {
   const pathDirs = env.PATH ? env.PATH.split(path.delimiter) : [];
   const zeaCommands = new Set();
@@ -60,11 +56,11 @@ async function main() {
 
     program.command(cmd)
       .allowUnknownOption()
-      .description(`External ZEA command (delegates to zea-${cmd})`)
+      .description(`ZEA service (delegates to zea-${cmd})`)
       .action((...args) => {
         const cmdIndex = process.argv.indexOf(cmd);
         const forwardArgs = process.argv.slice(cmdIndex + 1);
-        
+
         const result = spawnSync(`zea-${cmd}`, forwardArgs, {
           stdio: 'inherit',
           shell: true

@@ -15,7 +15,7 @@ echo "   node $(node -v)"
 
 # 1. Install CLI
 echo "   📦 Instalando CLI..."
-npm install -g github:ZeaCl/zea-agent-skill 2>/dev/null && echo "   ✅ zea instalado" || echo "   ⚠️  npm install falló, probá: npm install -g github:ZeaCl/zea-agent-skill"
+npm install -g github:ZeaCl/zea-cli 2>/dev/null && echo "   ✅ zea instalado" || echo "   ⚠️  npm install falló, probá: npm install -g github:ZeaCl/zea-cli"
 
 # 2. Agent skills
 if command -v npx &> /dev/null; then
@@ -34,12 +34,12 @@ echo ""
 
 read -p "   DeepSeek API Key (opcional, para Glia agent): " DS_KEY
 if [ -n "$DS_KEY" ]; then
-  zea config set deepseek_key "$DS_KEY" 2>/dev/null && echo "   ✅ DeepSeek API Key configurada" || echo "   ⚠️  No se pudo guardar (probá: zea config set deepseek_key <key>)"
+  zea thalamus config set deepseek_key "$DS_KEY" 2>/dev/null && echo "   ✅ DeepSeek API Key configurada" || echo "   ⚠️  No se pudo guardar (probá: zea thalamus config set deepseek_key <key>)"
 fi
 
 read -p "   Glia URL [http://localhost:4002]: " GLIA_URL
 GLIA_URL=${GLIA_URL:-http://localhost:4002}
-zea config set gliaUrl "$GLIA_URL" 2>/dev/null && echo "   ✅ Glia URL: $GLIA_URL" || echo "   ⚠️  No se pudo guardar"
+zea thalamus config set gliaUrl "$GLIA_URL" 2>/dev/null && echo "   ✅ Glia URL: $GLIA_URL" || echo "   ⚠️  No se pudo guardar"
 
 echo ""
 echo "   ═══ Instalación completa ═══"
@@ -52,8 +52,10 @@ echo "     zea doctor check glia"
 echo ""
 echo "   Configuración adicional:"
 echo ""
-echo "     zea config set deepseek_key <key>"
-echo "     zea config list"
+echo "     zea thalamus config set deepseek_key <key>"
+echo "     zea thalamus config list"
 echo ""
-echo "   Más info: https://github.com/ZeaCl/zea-agent-skill"
+echo "   Más info: https://github.com/ZeaCl/zea-cli"
+echo "   Instalar servicios:"
+echo "     npm install -g github:ZeaCl/thalamus  # zea thalamus auth|org|config|..."
 echo ""

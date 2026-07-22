@@ -1,4 +1,3 @@
-import dns from 'dns';
 import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
@@ -7,36 +6,7 @@ import crypto from 'crypto';
 import open from 'open';
 import { zeaFetch } from './lib/http.js';
 
-const originalLookup = dns.lookup;
-dns.lookup = function(hostname, options, callback) {
-  if (hostname === 'auth.zea.localhost' || hostname.endsWith('.zea.localhost') || hostname === 'zea.localhost') {
-    if (typeof options === 'function') {
-      callback = options;
-      options = {};
-    }
-    const isAll = options && options.all;
-    if (isAll) {
-      return callback(null, [{ address: '127.0.0.1', family: 4 }]);
-    } else {
-      return callback(null, '127.0.0.1', 4);
-    }
-  }
-  return originalLookup(hostname, options, callback);
-};
-
-const originalPromisesLookup = dns.promises.lookup;
-dns.promises.lookup = async function(hostname, options) {
-  if (hostname === 'auth.zea.localhost' || hostname.endsWith('.zea.localhost') || hostname === 'zea.localhost') {
-    const isAll = options && options.all;
-    if (isAll) {
-      return [{ address: '127.0.0.1', family: 4 }];
-    } else {
-      return { address: '127.0.0.1', family: 4 };
-    }
-  }
-  return originalPromisesLookup(hostname, options);
-};
-
+// .zea.localhost → 127.0.0.1 resolution is handled by zeaFetch in lib/http.js
 export const CONFIG_DIR = path.join(os.homedir(), '.config', 'zea');
 export const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 
@@ -142,12 +112,12 @@ export async function handleDirectLogin(options) {
 
 export async function handleLogin(options) {
   const apiUrl = process.env.ZEA_API_URL || process.env.THALAMUS_API_URL || options.url || 'http://auth.zea.localhost';
-  const port = 4005;
-  const redirectUri = `http://localhost:${port}/callback`;
 
   const codeVerifier = crypto.randomBytes(32).toString('base64url');
   const codeChallenge = crypto.createHash('sha256').update(codeVerifier).digest('base64url');
   const state = crypto.randomBytes(16).toString('hex');
+
+  let port, redirectUri;
 
   console.log('Starting local authentication flow...');
   
@@ -228,11 +198,22 @@ export async function handleLogin(options) {
     }
   });
 
-  server.listen(port, async () => {
+  server.listen(0, async () => {
+    port = server.address().port;
+    redirectUri = `http://localhost:${port}/callback`;
     const authorizeUrl = `${apiUrl}/oauth/authorize?response_type=code&client_id=thalamus_cli&redirect_uri=${encodeURIComponent(redirectUri)}&scope=openid%20profile%20zea:read%20zea:write&state=${state}&code_challenge=${codeChallenge}&code_challenge_method=S256`;
     console.log(`Opening browser to log in...`);
     console.log(`URL: ${authorizeUrl}`);
     await open(authorizeUrl);
+  });
+
+  server.on('error', (e) => {
+    if (e.code === 'EADDRINUSE') {
+      console.error('❌ All ports in use. Please free a port and try again.');
+    } else {
+      console.error('❌ Failed to start local server:', e.message);
+    }
+    process.exit(1);
   });
 }
 

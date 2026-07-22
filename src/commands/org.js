@@ -1,5 +1,6 @@
 import zeaFetch from '../lib/http.js';
 import { getClient, loadConfig, saveConfig } from '../client.js';
+import { handleError } from '../lib/errors.js';
 
 export function register(program) {
   const org = program.command('org').description('Organization management commands');
@@ -29,7 +30,7 @@ export function register(program) {
           console.log(`${activeMarker}${o.name} (Slug: ${o.slug || 'N/A'}, ID: ${o.id})`);
         });
       } catch (e) {
-        console.error('Error:', e.message);
+        handleError(e);
       }
     });
 
@@ -54,7 +55,7 @@ export function register(program) {
         await saveConfig(config);
         console.log(`Active organization context switched to: ${match.name} (${match.id})`);
       } catch (e) {
-        console.error('Error:', e.message);
+        handleError(e);
       }
     });
 
@@ -88,7 +89,7 @@ export function register(program) {
         console.log(`Owner: ${savedOrg.owner_email}`);
         console.log(`Plan: ${savedOrg.plan_type}`);
       } catch (e) {
-        console.error('Error:', e.message);
+        handleError(e);
       }
     });
 
@@ -127,7 +128,7 @@ export function register(program) {
         const result = await response.json();
         console.log(`Member '${options.email}' added to '${org.name}' as ${options.role}.`);
       } catch (e) {
-        console.error('Error:', e.message);
+        handleError(e);
       }
     });
 
@@ -159,7 +160,7 @@ export function register(program) {
         const result = await response.json();
         console.log(`Member '${options.userId}' removed from '${org.name}'.`);
       } catch (e) {
-        console.error('Error:', e.message);
+        handleError(e);
       }
     });
 
@@ -195,7 +196,103 @@ export function register(program) {
           console.log(`  ${email} — ${m.role} (ID: ${userId})`);
         });
       } catch (e) {
-        console.error('Error:', e.message);
+        handleError(e);
+      }
+    });
+
+  // ── show ───────────────────────────────────────────
+  org.command('show <slug_or_id>')
+    .description('Show organization details')
+    .action(async (target) => {
+      try {
+        const client = await getClient();
+        const response = await zeaFetch(`${client.apiUrl}/oauth/userinfo`, { headers: client.headers });
+        if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+
+        const info = await response.json();
+        const orgs = info.organizations || [];
+        const org = orgs.find(o => o.id === target || o.slug === target);
+
+        if (!org) throw new Error(`Organization '${target}' not found in your memberships.`);
+
+        // Get full org details
+        const detailResp = await zeaFetch(`${client.apiUrl}/api/organizations/${org.id}`, { headers: client.headers });
+        if (!detailResp.ok) throw new Error(`HTTP error ${detailResp.status}`);
+        const o = (await detailResp.json()).data;
+
+        console.log(`   Name:      ${o.name}`);
+        console.log(`   ID:        ${o.id}`);
+        console.log(`   Plan:      ${o.plan_type}`);
+        console.log(`   Status:    ${o.status}`);
+        console.log(`   Verified:  ${o.verified ? '✅' : '❌'}`);
+        console.log(`   Members:   ${o.current_user_count || (o.members || []).length}`);
+        console.log(`   Max Users: ${o.max_users}`);
+        if (o.domains && o.domains.length > 0) {
+          console.log(`   Domains:   ${o.domains.join(', ')}`);
+        }
+      } catch (e) {
+        handleError(e);
+      }
+    });
+
+  // ── update ─────────────────────────────────────────
+  org.command('update <slug_or_id>')
+    .description('Update organization name or plan')
+    .option('--name <name>', 'New organization name')
+    .option('--plan <plan>', 'New plan: free, basic, standard, premium, enterprise')
+    .action(async (target, options) => {
+      try {
+        const client = await getClient();
+        const response = await zeaFetch(`${client.apiUrl}/oauth/userinfo`, { headers: client.headers });
+        if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+
+        const info = await response.json();
+        const orgs = info.organizations || [];
+        const org = orgs.find(o => o.id === target || o.slug === target);
+        if (!org) throw new Error(`Organization '${target}' not found.`);
+
+        const body = {};
+        if (options.name) body.name = options.name;
+        if (options.plan) body.plan_type = options.plan;
+
+        const updateResp = await zeaFetch(`${client.apiUrl}/api/organizations/${org.id}`, {
+          method: 'PATCH', headers: client.headers, body: JSON.stringify(body)
+        });
+        if (!updateResp.ok) throw new Error(`HTTP error ${updateResp.status}`);
+        console.log('✅ Organization updated.');
+      } catch (e) {
+        handleError(e);
+      }
+    });
+
+  // ── saml ───────────────────────────────────────────
+  const samlCmd = org.command('saml').description('SAML SSO configuration');
+
+  samlCmd.command('show <slug_or_id>')
+    .description('Show SAML configuration')
+    .action(async (target) => {
+      try {
+        const client = await getClient();
+        const infoResp = await zeaFetch(`${client.apiUrl}/oauth/userinfo`, { headers: client.headers });
+        if (!infoResp.ok) throw new Error(`HTTP error ${infoResp.status}`);
+        const orgs = (await infoResp.json()).organizations || [];
+        const org = orgs.find(o => o.id === target || o.slug === target);
+        if (!org) throw new Error(`Organization '${target}' not found.`);
+
+        const resp = await zeaFetch(`${client.apiUrl}/api/organizations/${org.id}/saml-config`, { headers: client.headers });
+        if (!resp.ok) {
+          if (resp.status === 404) { console.log('No SAML configuration found for this organization.'); return; }
+          throw new Error(`HTTP error ${resp.status}`);
+        }
+        const data = (await resp.json()).data;
+        console.log(`   Name:         ${data.name}`);
+        console.log(`   Entity ID:    ${data.idp_entity_id}`);
+        console.log(`   SSO URL:      ${data.idp_sso_url}`);
+        console.log(`   Enabled:      ${data.enabled ? '✅' : '❌'}`);
+        console.log(`   JIT:          ${data.jit_provisioning ? '✅' : '❌'}`);
+        if (data.allowed_domains?.length) console.log(`   Domains:      ${data.allowed_domains.join(', ')}`);
+      } catch (e) {
+        handleError(e);
       }
     });
 }

@@ -1,5 +1,7 @@
 import zeaFetch from '../lib/http.js';
 import { getClient } from '../client.js';
+import { getGlobalOpts } from '../lib/globals.js';
+import { handleError } from '../lib/errors.js';
 
 export function register(program) {
   const tokenCmd = program.command('token').description('Personal Access Token (PAT) commands');
@@ -8,15 +10,26 @@ export function register(program) {
     .description('Create a new Personal Access Token')
     .requiredOption('--name <name>', 'Token description / name')
     .action(async (options) => {
+      const opts = getGlobalOpts();
       try {
         const client = await getClient();
+
+        const body = {
+          name: options.name,
+          organization_id: client.activeOrgId
+        };
+
+        if (opts.dryRun) {
+          console.log('⚠️  DRY RUN — would execute:');
+          console.log(`   POST ${client.apiUrl}/api/personal-access-tokens`);
+          console.log(`   Body: ${JSON.stringify(body, null, 2)}`);
+          return;
+        }
+
         const response = await zeaFetch(`${client.apiUrl}/api/personal-access-tokens`, {
           method: 'POST',
           headers: client.headers,
-          body: JSON.stringify({
-            name: options.name,
-            organization_id: client.activeOrgId
-          })
+          body: JSON.stringify(body)
         });
 
         if (!response.ok) {
@@ -31,7 +44,7 @@ export function register(program) {
         console.log('--------------------------------------------------');
         console.log('WARNING: Store this token safely. It will not be shown again.');
       } catch (e) {
-        console.error('Error:', e.message);
+        handleError(e);
       }
     });
 
@@ -58,7 +71,7 @@ export function register(program) {
           console.log(`- ${p.name} (Prefix: ${p.token_prefix}..., ID: ${p.id}, Active: ${p.is_active})`);
         });
       } catch (e) {
-        console.error('Error:', e.message);
+        handleError(e);
       }
     });
 
@@ -78,7 +91,7 @@ export function register(program) {
 
         console.log(`Token ${tokenId} revoked successfully.`);
       } catch (e) {
-        console.error('Error:', e.message);
+        handleError(e);
       }
     });
 }
