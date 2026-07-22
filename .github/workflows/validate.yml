@@ -1,0 +1,31 @@
+name: Validate CLI
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout Thalamus
+        uses: actions/checkout@v4
+        with:
+          repository: ZeaCl/thalamus
+          path: ../thalamus
+
+      - name: Checkout Soma SDK
+        uses: actions/checkout@v4
+        with:
+          repository: ZeaCl/soma-sdk
+          path: ../soma-sdk
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Run validation
+        run: ./scripts/validate.sh
