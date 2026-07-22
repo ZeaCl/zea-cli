@@ -80,11 +80,18 @@ echo "  cli:      ${PROJECT_DIR}"
 
 echo -e "\n${CYAN}🚀 Starting Thalamus...${NC}"
 docker compose -f "$THALAMUS_DIR/docker-compose.yml" up -d postgres redis 2>&1 | tail -1
-# Wait for DB to be healthy before starting the app
-wait_for_health "http://localhost:5532" "thalamus-postgres" 30 || true  # pg port not HTTP; just wait
-sleep 5
+# Wait for PostgreSQL to be ready
+for i in $(seq 1 30); do
+  if docker compose -f "$THALAMUS_DIR/docker-compose.yml" exec -T postgres pg_isready -U postgres >/dev/null 2>&1; then
+    echo -e "  ${GREEN}PostgreSQL ready (${i}s)${NC}"
+    break
+  fi
+  sleep 2
+  [ "$i" -eq 30 ] && { echo -e "${RED}❌ PostgreSQL failed${NC}"; exit 1; }
+done
+
 docker compose -f "$THALAMUS_DIR/docker-compose.yml" up -d thalamus 2>&1 | tail -1
-wait_for_health "http://localhost:4100/api/health" "Thalamus" 90 || {
+wait_for_health "http://localhost:4100/api/public/health" "Thalamus" 120 || {
   echo -e "${RED}❌ Thalamus failed to start${NC}"
   docker compose -f "$THALAMUS_DIR/docker-compose.yml" logs thalamus | tail -30
   exit 1
