@@ -8,6 +8,9 @@ on:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    env:
+      THALAMUS_DIR: ${{ github.workspace }}/thalamus
+      SOMA_DIR: ${{ github.workspace }}/soma-sdk
     steps:
       - uses: actions/checkout@v4
 
@@ -15,13 +18,13 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: ZeaCl/thalamus
-          path: ../thalamus
+          path: thalamus
 
       - name: Checkout Soma SDK
         uses: actions/checkout@v4
         with:
           repository: ZeaCl/soma-sdk
-          path: ../soma-sdk
+          path: soma-sdk
 
       - uses: actions/setup-node@v4
         with:
