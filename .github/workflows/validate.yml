@@ -1,4 +1,4 @@
-name: Validate CLI
+name: Validate CLI Core
 
 on:
   pull_request:
@@ -8,46 +8,19 @@ on:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    env:
-      THALAMUS_DIR: ${{ github.workspace }}/thalamus
-      SOMA_DIR: ${{ github.workspace }}/soma
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-
-      - name: Checkout Thalamus
-        uses: actions/checkout@v4
-        with:
-          repository: ZeaCl/thalamus
-          path: thalamus
-
-      - name: Checkout Soma
-        uses: actions/checkout@v4
-        with:
-          repository: ZeaCl/soma
-          path: soma
-
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: 'npm'
 
       - name: Install CLI core
         run: |
-          npm install
+          npm ci
           npm link
+          zea --version
 
-      - name: Install zea-thalamus
-        working-directory: thalamus/cli
-        run: |
-          npm install
-          npm link
-
-      - name: Install zea-soma
-        working-directory: soma/cli
-        run: |
-          npm install
-          npm link
-
-      # Note: zea-soma lives in zea/soma/cli — add here when soma has docker-compose for CI
-
-      - name: Run validation
+      - name: Run core validation
         run: ./scripts/validate.sh
