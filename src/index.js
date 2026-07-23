@@ -41,7 +41,7 @@ async function getDynamicCommands() {
           }
         }
       }
-    } catch (e) {
+    } catch {
       continue;
     }
   }
@@ -52,18 +52,19 @@ async function main() {
   const dynamicCommands = await getDynamicCommands();
 
   for (const cmd of dynamicCommands) {
-    if (program.commands.some(c => c.name() === cmd)) continue;
+    if (program.commands.some((c) => c.name() === cmd)) continue;
 
-    program.command(cmd)
+    program
+      .command(cmd)
       .allowUnknownOption()
       .description(`ZEA service (delegates to zea-${cmd})`)
-      .action((...args) => {
+      .action((..._args) => {
         const cmdIndex = process.argv.indexOf(cmd);
         const forwardArgs = process.argv.slice(cmdIndex + 1);
 
         const result = spawnSync(`zea-${cmd}`, forwardArgs, {
           stdio: 'inherit',
-          shell: true
+          shell: true,
         });
 
         process.exit(result.status || 0);

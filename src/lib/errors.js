@@ -30,7 +30,7 @@ export function handleError(e) {
 
   // 403 — Forbidden (wrong org or insufficient permissions)
   if (status === 403) {
-    console.error(chalk.red('🚫 Access denied. You don\'t have permission for this action.'));
+    console.error(chalk.red("🚫 Access denied. You don't have permission for this action."));
     console.error(chalk.dim('   Check your active organization: ') + chalk.yellow('zea org list'));
     process.exit(1);
   }

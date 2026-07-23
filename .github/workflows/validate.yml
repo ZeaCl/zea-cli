@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       THALAMUS_DIR: ${{ github.workspace }}/thalamus
-      SOMA_DIR: ${{ github.workspace }}/soma-sdk
+      SOMA_DIR: ${{ github.workspace }}/soma
     steps:
       - uses: actions/checkout@v4
 
@@ -20,15 +20,34 @@ jobs:
           repository: ZeaCl/thalamus
           path: thalamus
 
-      - name: Checkout Soma SDK
+      - name: Checkout Soma
         uses: actions/checkout@v4
         with:
-          repository: ZeaCl/soma-sdk
-          path: soma-sdk
+          repository: ZeaCl/soma
+          path: soma
 
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+
+      - name: Install CLI core
+        run: |
+          npm install
+          npm link
+
+      - name: Install zea-thalamus
+        working-directory: thalamus/cli
+        run: |
+          npm install
+          npm link
+
+      - name: Install zea-soma
+        working-directory: soma/cli
+        run: |
+          npm install
+          npm link
+
+      # Note: zea-soma lives in zea/soma/cli — add here when soma has docker-compose for CI
 
       - name: Run validation
         run: ./scripts/validate.sh

@@ -8,23 +8,24 @@ import { handleError } from '../lib/errors.js';
 const CONFIG_FILE = path.join(os.homedir(), '.config', 'zea', 'config.json');
 function findSkillsLock() {
   const candidates = [
-    path.resolve('skills-lock.json'),                       // cwd (dev)
+    path.resolve('skills-lock.json'), // cwd (dev)
     path.join(os.homedir(), '.config', 'opencode', 'skills-lock.json'),
   ];
   return candidates;
 }
 
 async function hashSkillsLock() {
-  let lockPath;
-  let lockData;
-  for (const p of findSkillsLock()) {
-    try {
-      lockData = JSON.parse(await fs.readFile(p, 'utf8'));
-      lockPath = p;
-      break;
-    } catch {}
-  }
-  if (!lockData) return { updated: 0, total: 0, error: 'skills-lock.json not found' };
+  try {
+    let lockPath;
+    let lockData;
+    for (const p of findSkillsLock()) {
+      try {
+        lockData = JSON.parse(await fs.readFile(p, 'utf8'));
+        lockPath = p;
+        break;
+      } catch {}
+    }
+    if (!lockData) return { updated: 0, total: 0, error: 'skills-lock.json not found' };
     if (!lockData.skills) return { updated: 0, total: 0 };
 
     let updated = 0;
@@ -66,8 +67,11 @@ async function hashSkillsLock() {
 }
 
 async function load() {
-  try { return JSON.parse(await fs.readFile(CONFIG_FILE, 'utf8')); }
-  catch { return {}; }
+  try {
+    return JSON.parse(await fs.readFile(CONFIG_FILE, 'utf8'));
+  } catch {
+    return {};
+  }
 }
 
 async function save(config) {
@@ -78,7 +82,8 @@ async function save(config) {
 export function register(program) {
   const configCmd = program.command('config').description('Manage ZEA configuration');
 
-  configCmd.command('set-env <env>')
+  configCmd
+    .command('set-env <env>')
     .description('Set standard environment profile (local or prod)')
     .action(async (envName) => {
       try {
@@ -113,7 +118,8 @@ export function register(program) {
       }
     });
 
-  configCmd.command('set <key> <value>')
+  configCmd
+    .command('set <key> <value>')
     .description('Set a configuration value')
     .action(async (key, value) => {
       try {
@@ -126,7 +132,8 @@ export function register(program) {
       }
     });
 
-  configCmd.command('get <key>')
+  configCmd
+    .command('get <key>')
     .description('Get a configuration value')
     .action(async (key) => {
       try {
@@ -141,7 +148,8 @@ export function register(program) {
       }
     });
 
-  configCmd.command('list')
+  configCmd
+    .command('list')
     .description('List all configuration values')
     .action(async () => {
       try {
@@ -160,9 +168,7 @@ export function register(program) {
         const masked = ['token', 'refreshToken', 'deepseek_key', 'deepseekKey'];
 
         for (const key of keys) {
-          const val = masked.includes(key)
-            ? '••••••••' + config[key].slice(-4)
-            : config[key];
+          const val = masked.includes(key) ? '••••••••' + config[key].slice(-4) : config[key];
           console.log(`  ${chalk.yellow(key)}: ${val}`);
         }
       } catch (e) {
@@ -170,7 +176,8 @@ export function register(program) {
       }
     });
 
-  configCmd.command('unset <key>')
+  configCmd
+    .command('unset <key>')
     .description('Remove a configuration value')
     .action(async (key) => {
       try {
@@ -183,13 +190,15 @@ export function register(program) {
       }
     });
 
-  configCmd.command('path')
+  configCmd
+    .command('path')
     .description('Show config file path')
     .action(() => {
       console.log(CONFIG_FILE);
     });
 
-  configCmd.command('lock-skills')
+  configCmd
+    .command('lock-skills')
     .description('Recompute SHA256 hashes in skills-lock.json from installed skill files')
     .action(async () => {
       try {

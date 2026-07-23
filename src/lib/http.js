@@ -35,34 +35,43 @@ export function zeaFetch(url, options = {}) {
     const port = parsed.port || (isHttps ? 443 : 80);
 
     // Resolve .zea.localhost → 127.0.0.1 without monkey-patching global DNS
-    const hostname = (parsed.hostname === 'zea.localhost' || parsed.hostname.endsWith('.zea.localhost'))
-      ? '127.0.0.1'
-      : parsed.hostname;
+    const hostname =
+      parsed.hostname === 'zea.localhost' || parsed.hostname.endsWith('.zea.localhost') ? '127.0.0.1' : parsed.hostname;
+
+    // Preserve original hostname for Caddy routing when resolving to 127.0.0.1
+    const headers = { ...(options.headers || {}) };
+    if (hostname === '127.0.0.1' && parsed.hostname !== '127.0.0.1') {
+      headers['Host'] = parsed.hostname;
+    }
 
     const reqOptions = {
       hostname,
       port: port,
       path: parsed.pathname + parsed.search,
       method: method,
-      headers: options.headers || {},
-      timeout: options.timeout || 30000
+      headers,
+      timeout: options.timeout || 30000,
     };
 
     if (isDebug()) {
       const bodyPreview = options.body
-        ? (typeof options.body === 'string' ? options.body.slice(0, 200) : JSON.stringify(options.body).slice(0, 200))
+        ? typeof options.body === 'string'
+          ? options.body.slice(0, 200)
+          : JSON.stringify(options.body).slice(0, 200)
         : '';
       console.error(`\x1b[2m[DEBUG] ${method} ${url}${bodyPreview ? '\n       body: ' + bodyPreview : ''}\x1b[0m`);
     }
 
     const req = mod.request(reqOptions, (res) => {
       let data = '';
-      res.on('data', chunk => data += chunk);
+      res.on('data', (chunk) => (data += chunk));
       res.on('end', () => {
         const elapsed = Date.now() - startTime;
         if (isDebug()) {
           const icon = res.statusCode >= 200 && res.statusCode < 400 ? '✅' : '❌';
-          console.error(`\x1b[2m[DEBUG] ← ${icon} ${res.statusCode} (${elapsed}ms)${data ? ' body: ' + data.slice(0, 300) : ''}\x1b[0m`);
+          console.error(
+            `\x1b[2m[DEBUG] ← ${icon} ${res.statusCode} (${elapsed}ms)${data ? ' body: ' + data.slice(0, 300) : ''}\x1b[0m`,
+          );
         }
         resolve({
           ok: res.statusCode >= 200 && res.statusCode < 400,
@@ -70,9 +79,13 @@ export function zeaFetch(url, options = {}) {
           statusText: res.statusMessage,
           headers: res.headers,
           json: async () => {
-            try { return JSON.parse(data); } catch (e) { throw new Error(`Invalid JSON: ${data.slice(0,100)}`); }
+            try {
+              return JSON.parse(data);
+            } catch (e) {
+              throw new Error(`Invalid JSON: ${data.slice(0, 100)}`, { cause: e });
+            }
           },
-          text: async () => data
+          text: async () => data,
         });
       });
     });
