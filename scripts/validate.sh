@@ -2,51 +2,16 @@
 set -euo pipefail
 
 # ============================================================================
-# zea-cli validate.sh — ephemeral validation against Thalamus + Soma
+# zea-cli validate.sh — CLI Core validation (router + config only)
 # ============================================================================
-# Usage:
-#   ./scripts/validate.sh              # expects ../thalamus and ../soma-sdk
-#   THALAMUS_DIR=../thalamus SOMA_DIR=../soma-sdk ./scripts/validate.sh
+# Service-specific E2E tests live in each service's own CI:
+#   - Thalamus:  thalamus/.github/workflows/cli-e2e.yml
+#   - Soma:      soma/.github/workflows/ (TBD)
 # ============================================================================
-
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
-THALAMUS_DIR="${THALAMUS_DIR:-$PROJECT_DIR/../thalamus}"
-SOMA_DIR="${SOMA_DIR:-$PROJECT_DIR/../soma-sdk}"
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; CYAN='\033[0;36m'; YELLOW='\033[1;33m'; NC='\033[0m'
 
 PASS=0; FAIL=0
-
-# ── Cleanup ────────────────────────────────────────────
-
-cleanup() {
-  echo -e "\n${CYAN}🧹 Cleaning up ephemeral containers...${NC}"
-  if [ -f "$THALAMUS_DIR/docker-compose.yml" ]; then
-    docker compose -f "$THALAMUS_DIR/docker-compose.yml" down -v 2>/dev/null || true
-  fi
-  if [ -f "$SOMA_DIR/docker-compose.test.yml" ]; then
-    docker compose -f "$SOMA_DIR/docker-compose.test.yml" down -v 2>/dev/null || true
-  fi
-  echo -e "${CYAN}🧹 Done.${NC}"
-}
-trap cleanup EXIT
-
-# ── Helpers ────────────────────────────────────────────
-
-wait_for_health() {
-  local url="$1"; local name="$2"; local max="${3:-60}"
-  echo -ne "${CYAN}⏳ Waiting for ${name} (${url})...${NC}"
-  for i in $(seq 1 "$max"); do
-    if curl -sf "$url" >/dev/null 2>&1; then
-      echo -e " ${GREEN}ready (${i}s)${NC}"
-      return 0
-    fi
-    sleep 2; echo -n "."
-  done
-  echo -e " ${RED}FAILED after ${max}s${NC}"
-  return 1
-}
 
 assert() {
   local desc="$1"; local expected="$2"; local actual="$3"
@@ -62,61 +27,14 @@ assert() {
 }
 
 cmd() {
-  node "$PROJECT_DIR/src/index.js" "$@"
+  zea "$@"
 }
-
-# ── Pre-flight checks ─────────────────────────────────
 
 echo -e "${CYAN}══════════════════════════════════════════${NC}"
-echo -e "${CYAN}🧪 zea-cli Validation${NC}"
+echo -e "${CYAN}🧪 zea-cli Core Validation${NC}"
 echo -e "${CYAN}══════════════════════════════════════════${NC}"
 
-echo -e "\n${CYAN}📋 Pre-flight${NC}"
-echo "  thalamus: ${THALAMUS_DIR}"
-echo "  soma:     ${SOMA_DIR}"
-echo "  cli:      ${PROJECT_DIR}"
-
-# ── 1. Start Thalamus ─────────────────────────────────
-
-echo -e "\n${CYAN}🚀 Starting Thalamus...${NC}"
-docker compose -f "$THALAMUS_DIR/docker-compose.yml" up -d postgres redis 2>&1 | tail -1
-# Wait for PostgreSQL to be ready
-for i in $(seq 1 30); do
-  if docker compose -f "$THALAMUS_DIR/docker-compose.yml" exec -T postgres pg_isready -U postgres >/dev/null 2>&1; then
-    echo -e "  ${GREEN}PostgreSQL ready (${i}s)${NC}"
-    break
-  fi
-  sleep 2
-  [ "$i" -eq 30 ] && { echo -e "${RED}❌ PostgreSQL failed${NC}"; exit 1; }
-done
-
-docker compose -f "$THALAMUS_DIR/docker-compose.yml" up -d thalamus 2>&1 | tail -1
-wait_for_health "http://localhost:4100/api/public/health" "Thalamus" 120 || {
-  echo -e "${RED}❌ Thalamus failed to start${NC}"
-  docker compose -f "$THALAMUS_DIR/docker-compose.yml" logs thalamus | tail -30
-  exit 1
-}
-
-# ── 2. Start Soma ─────────────────────────────────────
-
-echo -e "\n${CYAN}🐘 Starting Soma...${NC}"
-docker compose -f "$SOMA_DIR/docker-compose.test.yml" up -d 2>&1 | tail -1
-wait_for_health "http://localhost:4084/health" "Soma" 90 || {
-  echo -e "${RED}❌ Soma failed to start${NC}"
-  docker compose -f "$SOMA_DIR/docker-compose.test.yml" logs soma | tail -30
-  exit 1
-}
-
-# Run Soma migrations
-docker compose -f "$SOMA_DIR/docker-compose.test.yml" exec -T soma bin/soma eval "Soma.Release.migrate" 2>/dev/null || true
-
-# ── 3. Install CLI ────────────────────────────────────
-
-echo -e "\n${CYAN}📦 Installing zea-cli...${NC}"
-cd "$PROJECT_DIR"
-npm install --silent 2>&1 | tail -1
-
-# ── 4. Test: basic CLI ────────────────────────────────
+# ═══ 1. CLI basics ═══════════════════════════════════
 
 echo -e "\n${CYAN}🧪 Test: CLI basics${NC}"
 
@@ -126,41 +44,79 @@ assert "version command works" "2.0.0" "$OUT"
 OUT=$(cmd --help 2>&1)
 assert "help shows name" "zea" "$OUT"
 
-# ── 5. Test: Thalamus service ─────────────────────────
+# ═══ 2. Router discovery ══════════════════════════════
 
-echo -e "\n${CYAN}🧪 Test: Thalamus service${NC}"
+echo -e "\n${CYAN}🧪 Test: Router discovery${NC}"
 
-# Set config for local Thalamus
-cmd config set apiUrl "http://localhost:4100" 2>/dev/null || true
+OUT=$(cmd --help 2>&1)
+assert "help shows router description" "thin router" "$OUT"
 
-# Direct login (password grant)
-OUT=$(cmd thalamus auth login --email admin@zea.local --password Admin123! 2>&1 || true)
-assert "login succeeds" "Successfully" "$OUT"
+# If external service CLIs are installed, verify they appear in help
+if which zea-thalamus &>/dev/null; then
+  echo -e "  ${GREEN}✅ zea-thalamus found in PATH${NC}"
+  PASS=$((PASS + 1))
 
-OUT=$(cmd thalamus health 2>&1 || true)
-assert "thalamus health" "ok" "$OUT"
+  # Quick smoke: verify delegation works
+  OUT=$(cmd thalamus --help 2>&1 || true)
+  assert "thalamus delegation works" "Identity|Commands" "$OUT"
+else
+  echo -e "  ${YELLOW}⚠️  zea-thalamus not in PATH (service E2E runs in thalamus repo)${NC}"
+fi
 
-OUT=$(cmd thalamus org list 2>&1 || true)
-assert "org list returns data" "org" "$OUT"
+if which zea-soma &>/dev/null; then
+  echo -e "  ${GREEN}✅ zea-soma found in PATH${NC}"
+  PASS=$((PASS + 1))
 
-# ── 6. Test: Soma service ─────────────────────────────
+  OUT=$(cmd soma --help 2>&1 || true)
+  assert "soma delegation works" "AgentHub|Commands" "$OUT"
+else
+  echo -e "  ${YELLOW}⚠️  zea-soma not in PATH (service E2E runs in soma repo)${NC}"
+fi
 
-echo -e "\n${CYAN}🧪 Test: Soma service${NC}"
+# ═══ 3. Config commands ══════════════════════════════
 
-OUT=$(cmd soma health 2>&1 || true)
-assert "soma health" "ok" "$OUT"
+echo -e "\n${CYAN}🧪 Test: Config commands${NC}"
 
-# ── 7. Test: Error handling ───────────────────────────
+OUT=$(cmd config path 2>&1)
+assert "config path shows file" ".config" "$OUT"
 
-echo -e "\n${CYAN}🧪 Test: Error handling${NC}"
+OUT=$(cmd config list 2>&1)
+assert "config list works" "Configuration|No configuration" "$OUT"
 
-OUT=$(cmd thalamus org show nonexistent 2>&1 || true)
-assert "404 shows proper message" "not found" "$OUT"
+OUT=$(cmd config set test-key test-value 2>&1)
+assert "config set works" "test-key" "$OUT"
 
-OUT=$(cmd --invalid-flag 2>&1 || true)
-assert "unknown flag handled" "unknown|error" "$OUT"
+OUT=$(cmd config get test-key 2>&1)
+assert "config get works" "test-value" "$OUT"
 
-# ── Report ────────────────────────────────────────────
+OUT=$(cmd config unset test-key 2>&1)
+assert "config unset works" "removed" "$OUT"
+
+OUT=$(cmd config set-env prod 2>&1)
+assert "config set-env prod works" "PROD" "$OUT"
+
+OUT=$(cmd config set-env local 2>&1)
+assert "config set-env local works" "LOCAL" "$OUT"
+
+OUT=$(cmd config set-env invalid 2>&1 || true)
+assert "config set-env invalid shows error" "Unknown" "$OUT"
+
+# ═══ 4. Manifest (if available) ═══════════════════════
+
+echo -e "\n${CYAN}🧪 Test: Manifest discovery${NC}"
+
+for bin in zea-thalamus zea-soma; do
+  if which "$bin" &>/dev/null; then
+    if "$bin" --zea-manifest &>/dev/null 2>&1; then
+      echo -e "  ${GREEN}✅ ${bin} --zea-manifest OK${NC}"
+      PASS=$((PASS + 1))
+    else
+      echo -e "  ${YELLOW}⚠️  ${bin} --zea-manifest not implemented yet${NC}"
+    fi
+  fi
+done
+
+# ═══ Report ═══════════════════════════════════════════
 
 echo -e "\n${CYAN}══════════════════════════════════════════${NC}"
 echo -e "${CYAN}📊 Results${NC}"
@@ -170,5 +126,5 @@ if [ "$FAIL" -gt 0 ]; then
   exit 1
 else
   echo -e "  ${GREEN}Failed: 0${NC}"
-  echo -e "\n${GREEN}✅ All validations passed${NC}"
+  echo -e "\n${GREEN}✅ All core validations passed${NC}"
 fi

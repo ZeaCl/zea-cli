@@ -21,7 +21,7 @@ export function getGlobalOpts() {
 }
 
 function hasFlag(args, ...names) {
-  return names.some(n => args.includes(n));
+  return names.some((n) => args.includes(n));
 }
 
 function getFlagValue(args, ...names) {

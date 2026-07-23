@@ -77,10 +77,14 @@ function renderToken(token) {
       return chalk.dim(token.text + '\n');
 
     case 'list':
-      return token.items.map((item, i) => {
-        const text = item.tokens ? item.tokens.map(renderToken).join('') : item.text;
-        return `  ${chalk.dim(token.ordered ? `${i + 1}.` : '•')} ${text}`;
-      }).join('\n') + '\n';
+      return (
+        token.items
+          .map((item, i) => {
+            const text = item.tokens ? item.tokens.map(renderToken).join('') : item.text;
+            return `  ${chalk.dim(token.ordered ? `${i + 1}.` : '•')} ${text}`;
+          })
+          .join('\n') + '\n'
+      );
 
     case 'list_item':
       return token.tokens ? token.tokens.map(renderToken).join('') : token.text;
@@ -88,9 +92,10 @@ function renderToken(token) {
     case 'table':
       return renderTable(token) + '\n';
 
-    case 'blockquote':
+    case 'blockquote': {
       const ctx = token.tokens ? token.tokens.map(renderToken).join('') : token.text;
       return chalk.italic.dim(ctx) + '\n';
+    }
 
     case 'hr':
       return chalk.dim('─'.repeat(40)) + '\n';
@@ -110,23 +115,35 @@ function renderToken(token) {
 }
 
 function renderTable(token) {
-  const header = token.header.map(h => chalk.bold(h.text));
-  const rows = token.rows.map(row => row.map(c => c.text));
+  const header = token.header.map((h) => chalk.bold(h.text));
+  const rows = token.rows.map((row) => row.map((c) => c.text));
   const all = [header, ...rows];
 
-  const colWidths = header.map((_, ci) =>
-    Math.max(...all.map(row => (row[ci] || '').length))
-  );
+  const colWidths = header.map((_, ci) => Math.max(...all.map((row) => (row[ci] || '').length)));
 
   const pad = (text, w) => text + ' '.repeat(Math.max(0, w - text.length));
 
   let out = '';
-  out += '  ' + chalk.dim('┌' + colWidths.map(w => '─'.repeat(w + 2)).join('┬') + '┐') + '\n';
-  out += '  ' + chalk.dim('│') + ' ' + header.map((h, i) => chalk.bold(pad(h, colWidths[i]))).join(' ' + chalk.dim('│') + ' ') + ' ' + chalk.dim('│') + '\n';
-  out += '  ' + chalk.dim('├' + colWidths.map(w => '─'.repeat(w + 2)).join('┼') + '┤') + '\n';
+  out += '  ' + chalk.dim('┌' + colWidths.map((w) => '─'.repeat(w + 2)).join('┬') + '┐') + '\n';
+  out +=
+    '  ' +
+    chalk.dim('│') +
+    ' ' +
+    header.map((h, i) => chalk.bold(pad(h, colWidths[i]))).join(' ' + chalk.dim('│') + ' ') +
+    ' ' +
+    chalk.dim('│') +
+    '\n';
+  out += '  ' + chalk.dim('├' + colWidths.map((w) => '─'.repeat(w + 2)).join('┼') + '┤') + '\n';
   for (const row of rows) {
-    out += '  ' + chalk.dim('│') + ' ' + row.map((c, i) => pad(c, colWidths[i])).join(' ' + chalk.dim('│') + ' ') + ' ' + chalk.dim('│') + '\n';
+    out +=
+      '  ' +
+      chalk.dim('│') +
+      ' ' +
+      row.map((c, i) => pad(c, colWidths[i])).join(' ' + chalk.dim('│') + ' ') +
+      ' ' +
+      chalk.dim('│') +
+      '\n';
   }
-  out += '  ' + chalk.dim('└' + colWidths.map(w => '─'.repeat(w + 2)).join('┴') + '┘');
+  out += '  ' + chalk.dim('└' + colWidths.map((w) => '─'.repeat(w + 2)).join('┴') + '┘');
   return out;
 }

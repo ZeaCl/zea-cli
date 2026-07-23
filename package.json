@@ -8,7 +8,13 @@
     "zea": "./src/index.js"
   },
   "scripts": {
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "lint": "eslint src/",
+    "format": "prettier --write src/",
+    "format:check": "prettier --check src/",
+    "test": "node --test 'src/**/*.test.js'",
+    "test:coverage": "node --test --experimental-test-coverage --test-coverage-lines=80 --test-coverage-branches=70 --test-coverage-functions=80 'src/**/*.test.js'",
+    "audit": "npm audit --production"
   },
   "dependencies": {
     "chalk": "^5.6.2",
@@ -17,5 +23,11 @@
     "open": "^10.1.0",
     "ora": "^9.4.0",
     "ws": "^8.21.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.7.0",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.9.6"
   }
 }
