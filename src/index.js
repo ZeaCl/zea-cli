@@ -21,6 +21,12 @@ program
   .option('--quiet', 'Suppress non-essential output', false)
   .option('--no-color', 'Disable ANSI colors', false);
 
+// ── Built-in commands ──────────────────────────────────
+// Core commands that don't belong to any service.
+import { register as registerConfig } from './commands/config.js';
+
+registerConfig(program);
+
 // ── Dynamic PATH Discovery ──────────────────────────────
 // Scans PATH for zea-<service> binaries and mounts them as subcommands.
 // Built-in commands have zero knowledge of any service — everything is delegated.
