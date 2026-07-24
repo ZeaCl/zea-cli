@@ -1,17 +1,14 @@
 #!/bin/bash
 # ============================================================================
-# demo.sh — ZEA Platform onboarding completo
+# demo.sh — ZEA Platform: crea tu app con agentes IA en 2 minutos
 # ============================================================================
-# Corre contra auth.zea.cl y soma.zea.cl (producción).
-# Crea una app desde cero con auth, agentes IA, sandbox y archivos.
+# Corre contra producción (auth.zea.cl, soma.zea.cl).
+# No requiere API keys — usa el demo agent pre-configurado.
 #
 # Uso:
+#   npm install -g @zea.cl/cli @zea.cl/thalamus @zea/soma-cli
+#   zea thalamus login      # (solo la primera vez)
 #   ./scripts/demo.sh
-#
-# Requisitos:
-#   - zea CLI instalado (npm install -g @zea.cl/cli)
-#   - zea-thalamus + zea-soma en PATH
-#   - deepseek_key en ~/.config/zea/config.json (se lee automáticamente)
 # ============================================================================
 
 set -euo pipefail
@@ -26,228 +23,130 @@ NC='\033[0m'
 banner() {
   echo ""
   echo -e "${CYAN}╔══════════════════════════════════════════╗${NC}"
-  echo -e "${CYAN}║  🚀 ZEA Platform — Demo completa        ║${NC}"
-  echo -e "${CYAN}║  Auth + Agentes + Files + Sandbox       ║${NC}"
+  echo -e "${CYAN}║  🚀 ZEA Platform — Crea tu app en 2 min ║${NC}"
   echo -e "${CYAN}╚══════════════════════════════════════════╝${NC}"
 }
 
 step() {
   echo ""
-  echo -e "${BOLD}${CYAN}📝 Paso $1: $2${NC}"
+  echo -e "${BOLD}${CYAN}📝 $1${NC}"
 }
 
-check() {
-  echo -e "  ${GREEN}✅${NC} $1"
-}
+check()  { echo -e "  ${GREEN}✅${NC} $1"; }
+info()  { echo -e "  ${CYAN}ℹ️${NC}  $1"; }
+warn()  { echo -e "  ${YELLOW}⚠️${NC}  $1"; }
 
 fail() {
   echo -e "  ${RED}❌${NC} $1"
+  exit 1
 }
 
-cleanup() {
-  echo ""
-  echo -e "${CYAN}🧹 Limpiando recursos de demo...${NC}"
-
-  if [ -n "${AGENT_NAME:-}" ]; then
-    zea soma agent delete "$AGENT_NAME" 2>/dev/null || true
-    echo "  agente eliminado"
-  fi
-
-  if [ -n "${CLIENT_ID:-}" ]; then
-    zea thalamus client delete "$CLIENT_ID" 2>/dev/null || true
-    echo "  client eliminado"
-  fi
-
-  if [ -n "${ORG_SLUG:-}" ]; then
-    echo "  org '$ORG_SLUG' conservada (puedes eliminarla manualmente)"
-  fi
-
-  rm -f demo.py
-  echo "  archivos temporales eliminados"
-  echo -e "${GREEN}🧹 Cleanup completo${NC}"
-}
-
-trap cleanup EXIT
-
-# ── Pre-flight ────────────────────────────────────────
+# ── 0. Pre-flight ──────────────────────────────────────
 
 banner
 
-echo ""
-echo -e "${CYAN}🔍 Verificando requisitos...${NC}"
+for cmd in zea zea-thalamus zea-soma; do
+  command -v "$cmd" >/dev/null 2>&1 || fail "$cmd no encontrado. Instálalo con npm install -g @zea.cl/cli @zea.cl/thalamus @zea/soma-cli"
+done
 
-command -v zea >/dev/null 2>&1 || { fail "zea CLI no encontrado. npm install -g @zea.cl/cli"; exit 1; }
-check "zea CLI $(zea --version)"
-
-command -v zea-thalamus >/dev/null 2>&1 || { fail "zea-thalamus no encontrado. npm install -g @zea.cl/thalamus"; exit 1; }
-check "zea-thalamus instalado"
-
-command -v zea-soma >/dev/null 2>&1 || { fail "zea-soma no encontrado. npm install -g @zea/soma-cli"; exit 1; }
-check "zea-soma instalado"
-
-# ── 1. Login ──────────────────────────────────────────
-
-step "1/7" "Autenticación (OAuth2 PKCE)"
-
-if zea thalamus whoami &>/dev/null 2>&1; then
-  check "ya estás autenticado: $(zea thalamus whoami 2>/dev/null | head -1)"
-else
+if ! zea thalamus whoami &>/dev/null 2>&1; then
   echo ""
-  echo -e "  ${YELLOW}Se abrirá el navegador para iniciar sesión...${NC}"
-  zea thalamus login
-  check "login exitoso"
-fi
-
-USER_EMAIL=$(zea thalamus whoami 2>/dev/null | grep -oP '[\w.+-]+@[\w.-]+' || echo "usuario@zea.cl")
-
-# ── 2. Org ────────────────────────────────────────────
-
-step "2/7" "Crear organización"
-
-ORG_NAME="DemoApp-$(date +%s | tail -c 5)"
-echo "  Creando organización: $ORG_NAME"
-
-zea thalamus org create \
-  --name "$ORG_NAME" \
-  --email "$USER_EMAIL" \
-  --plan standard
-
-ORG_SLUG=$(echo "$ORG_NAME" | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
-check "organización '$ORG_NAME' creada"
-
-# ── 3. Client ─────────────────────────────────────────
-
-step "3/7" "Registrar aplicación OAuth2"
-
-CLIENT_OUTPUT=$(zea thalamus client create \
-  --name "demo-web-$(date +%s)" \
-  --type confidential \
-  --redirect-uris "http://localhost:3000/callback" \
-  --grants "authorization_code,refresh_token" \
-  --scopes "openid,profile,email" 2>&1)
-
-CLIENT_ID=$(echo "$CLIENT_OUTPUT" | grep -oP 'client_id[:\s]+\K[\w-]+' || echo "creado")
-check "OAuth2 client registrado"
-echo "  client_id: $CLIENT_ID"
-
-# ── 4. Secreto ────────────────────────────────────────
-
-step "4/7" "Verificar API key de IA"
-
-DEEPSEEK_KEY=$(zea config get deepseek_key 2>/dev/null || zea config get deepseekKey 2>/dev/null || echo "")
-
-if [ -n "$DEEPSEEK_KEY" ]; then
-  check "DeepSeek API key encontrada en ~/.config/zea/config.json"
-else
-  echo -e "  ${YELLOW}⚠️  No se encontró deepseek_key en config.${NC}"
-  echo "     El agente IA no estará disponible."
-  echo "     Configúrala con: zea config set deepseek_key sk-..."
+  echo -e "  ${YELLOW}Primero inicia sesión:${NC}"
+  echo ""
+  echo "    zea thalamus login"
+  echo ""
   exit 0
 fi
 
-# ── 5. Agente + Skill ─────────────────────────────────
+USER_NAME=$(zea thalamus whoami 2>/dev/null | grep -oP '\(.*?\)' | tr -d '()' || echo "dev")
+check "Autenticado como: $USER_NAME"
 
-step "5/7" "Crear agente IA con skills"
+# ── 1. Crear organización ──────────────────────────────
 
-AGENT_NAME="asistente-demo-$(date +%s | tail -c 4)"
-echo "  Creando agente: $AGENT_NAME"
+step "1/5  Creando tu organización"
 
-zea soma agent create \
-  --name "$AGENT_NAME" \
-  --model "deepseek-v4-pro" \
-  --system "Eres un asistente experto en ZEA Platform. Ayudas a developers a integrar auth OAuth2, gestionar organizaciones, crear agentes IA y usar sandboxes." 2>&1 | tail -1
-check "agente '$AGENT_NAME' creado"
+SUFFIX=$(date +%s | tail -c 5)
+ORG_NAME="mi-app-${SUFFIX}"
 
-zea soma skill create \
-  --name "zea-docs-demo" \
-  --content "ZEA Platform tiene 3 servicios principales:
+zea thalamus org create \
+  --name "$ORG_NAME" \
+  --email "$(zea thalamus whoami 2>/dev/null | grep -oP '[\w.+-]+@[\w.-]+')" \
+  --plan free 2>&1 | tail -1
 
-1. Thalamus — Identity & Access Management
-   - OAuth2 / OIDC compliant
-   - Organizaciones multi-tenant
-   - Personal Access Tokens (PAT)
-   - Domain-based RBAC
-   - MFA (TOTP)
+check "Organización '$ORG_NAME' creada"
 
-2. Soma — AgentHub
-   - Agentes IA multi-modelo (DeepSeek, OpenAI, Anthropic)
-   - Skills en Markdown
-   - Sandboxes para ejecución de código
-   - Workspaces con archivos versionados (Git-like)
-   - Chat interactivo vía WebSocket
+# ── 2. Compartir con un miembro ────────────────────────
 
-3. Cerebelum — Knowledge Base
-   - Documentos con RAG
-   - Embeddings y búsqueda semántica" 2>&1 | tail -1
-check "skill 'zea-docs-demo' creada"
+step "2/5  Invitando a tu equipo"
 
-zea soma skill assign zea-docs-demo --agents "$AGENT_NAME" 2>&1 | tail -1
-check "skill asignada al agente"
+info "En producción, invita miembros con:"
+echo "    zea thalamus org member add $ORG_NAME --email colega@empresa.com --role member"
+info "(saltamos este paso — es una demo)"
 
-zea soma agent list 2>&1 | head -5
-echo "  ..."
+# ── 3. Registrar app OAuth2 ────────────────────────────
 
-# ── 6. Chat ───────────────────────────────────────────
+step "3/5  Registrando tu aplicación web"
 
-step "6/7" "Chatear con el agente (one-shot)"
+CLIENT_OUTPUT=$(zea thalamus client create \
+  --name "mi-app-web-${SUFFIX}" \
+  --type confidential \
+  --redirect-uris "http://localhost:3000/callback,https://miapp.com/callback" \
+  --grants "authorization_code,refresh_token" \
+  --scopes "openid,profile,email" 2>&1)
+
+check "OAuth2 client registrado"
+
+CLIENT_ID=$(echo "$CLIENT_OUTPUT" | grep -oP 'client_id[:\s]+\K[\w-]+' || echo "N/A")
+CLIENT_SECRET=$(echo "$CLIENT_OUTPUT" | grep -oP 'client_secret[:\s]+\K[\w-]+' || echo "N/A")
 
 echo ""
-echo -e "  ${YELLOW}💬 Preguntando al agente...${NC}"
+echo -e "  ${BOLD}Guarda esto en tu .env:${NC}"
+echo ""
+echo "  ZEA_CLIENT_ID=$CLIENT_ID"
+echo "  ZEA_CLIENT_SECRET=$CLIENT_SECRET"
+echo "  ZEA_REDIRECT_URI=http://localhost:3000/callback"
+
+# ── 4. Agentes IA ──────────────────────────────────────
+
+step "4/5  Probando agentes de Soma"
+
+echo "  Agentes disponibles:"
+zea soma agent list 2>&1 | head -10
+
+echo ""
+echo -e "  ${YELLOW}💬 Preguntando a un agente público...${NC}"
 echo ""
 
-zea soma chat "$AGENT_NAME" -p "¿Qué servicios ofrece ZEA Platform y cómo se integran entre sí? Responde en 2-3 frases."
-
-check "chat con agente completado"
-
-# ── 7. Files + Sandbox ────────────────────────────────
-
-step "7/7" "Subir archivo y ejecutar en sandbox"
-
-cat > demo.py << 'PYEOF'
-# Demo: script ejecutado en ZEA Sandbox
-import json
-import sys
-
-resultado = {
-    "plataforma": "ZEA",
-    "servicios": ["Thalamus", "Soma", "Cerebelum"],
-    "status": "ok",
-    "mensaje": "¡Hola desde el sandbox de ZEA!"
+zea soma chat full-stack-dev \
+  -p "¿Qué es ZEA Platform? Responde en 1-2 frases." 2>&1 || {
+  warn "Chat no disponible (puede requerir API key configurada en la org)"
 }
 
-print(json.dumps(resultado, indent=2, ensure_ascii=False))
-print(f"\nPython {sys.version}")
-PYEOF
+# ── 5. Health + estado ─────────────────────────────────
 
-echo "  Subiendo demo.py..."
-zea soma files upload demo.py --agent "$AGENT_NAME" 2>&1 | tail -1
-check "demo.py subido al workspace"
+step "5/5  Verificando servicios"
 
-echo ""
-echo "  Archivos en el workspace:"
-zea soma files list --agent "$AGENT_NAME" 2>&1 | head -10
+echo "  Thalamus:"
+zea thalamus health 2>&1 | head -3
 
 echo ""
-echo -e "  ${YELLOW}📁 Leyendo demo.py desde el sandbox...${NC}"
-zea soma files read demo.py --agent "$AGENT_NAME" 2>&1 | head -5
-echo "  ..."
-
-check "sandbox listo"
+echo "  Soma:"
+zea soma health 2>&1 | head -3
 
 # ── Resultado ─────────────────────────────────────────
 
 echo ""
 echo -e "${GREEN}╔══════════════════════════════════════════╗${NC}"
-echo -e "${GREEN}║  ✅ Demo completa                        ║${NC}"
+echo -e "${GREEN}║  ✅ ¡Demo completa!                      ║${NC}"
 echo -e "${GREEN}║                                          ║${NC}"
-echo -e "${GREEN}║  Tu app ya tiene:                        ║${NC}"
-echo -e "${GREEN}║  🔐 Auth OAuth2 (login/registro)         ║${NC}"
-echo -e "${GREEN}║  🏢 Organización: $ORG_NAME              ║${NC}"
-echo -e "${GREEN}║  🤖 Agente IA: $AGENT_NAME              ║${NC}"
-echo -e "${GREEN}║  📁 Sandbox con archivos                 ║${NC}"
-echo -e "${GREEN}║  🔑 API keys + OAuth2 client             ║${NC}"
+echo -e "${GREEN}║  Org:       ${ORG_NAME}                  ${NC}"
+echo -e "${GREEN}║  Client ID: ${CLIENT_ID}                 ${NC}"
 echo -e "${GREEN}║                                          ║${NC}"
-echo -e "${GREEN}║  Siguiente paso:                         ║${NC}"
-echo -e "${GREEN}║  \$ npm install @zea.cl/soma-sdk          ║${NC}"
-echo -e "${GREEN}║  <GliaChat agentId='$AGENT_NAME' />      ║${NC}"
+echo -e "${GREEN}║  Siguientes pasos:                       ║${NC}"
+echo -e "${GREEN}║                                          ║${NC}"
+echo -e "${GREEN}║  1. Copiá las credenciales a tu .env     ║${NC}"
+echo -e "${GREEN}║  2. npm install @zea.cl/soma-sdk          ║${NC}"
+echo -e "${GREEN}║  3. <GliaChat agentId='full-stack-dev' /> ║${NC}"
+echo -e "${GREEN}║                                          ║${NC}"
+echo -e "${GREEN}║  Docs: https://docs.zea.cl               ║${NC}"
 echo -e "${GREEN}╚══════════════════════════════════════════╝${NC}"
