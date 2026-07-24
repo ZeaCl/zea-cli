@@ -10,8 +10,8 @@
 #
 # Requisitos:
 #   - zea CLI instalado (npm install -g @zea.cl/cli)
-#   - zea-thalamus + zea-soma en PATH (npm install -g @zea.cl/thalamus @zea/soma-cli)
-#   - DEEPSEEK_API_KEY en .env (opcional, para el agente IA)
+#   - zea-thalamus + zea-soma en PATH
+#   - deepseek_key en ~/.config/zea/config.json (se lee automáticamente)
 # ============================================================================
 
 set -euo pipefail
@@ -134,12 +134,15 @@ echo "  client_id: $CLIENT_ID"
 
 step "4/7" "Configurar API key de IA"
 
-if [ -n "${DEEPSEEK_API_KEY:-}" ]; then
+DEEPSEEK_KEY=$(zea config get deepseek_key 2>/dev/null || zea config get deepseekKey 2>/dev/null || echo "")
+
+if [ -n "$DEEPSEEK_KEY" ]; then
+  echo "  Creando secreto deepseek desde config local..."
   zea thalamus secret create \
     --name "deepseek-demo" \
     --provider deepseek \
-    --value "$DEEPSEEK_API_KEY" 2>/dev/null || true
-  check "DeepSeek API key configurada"
+    --value "$DEEPSEEK_KEY" 2>/dev/null || echo "  (ya existe, continuando)"
+  check "DeepSeek API key configurada (desde ~/.config/zea)"
 else
   echo -e "  ${YELLOW}⚠️  DEEPSEEK_API_KEY no definida. Saltando...${NC}"
   echo "     export DEEPSEEK_API_KEY=sk-... para habilitar el agente IA"
