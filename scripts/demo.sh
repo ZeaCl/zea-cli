@@ -58,7 +58,8 @@ if ! zea thalamus whoami &>/dev/null 2>&1; then
   exit 0
 fi
 
-USER_NAME=$(zea thalamus whoami 2>/dev/null | grep -oP '\(.*?\)' | tr -d '()' || echo "dev")
+USER_NAME=$(zea thalamus whoami 2>/dev/null | grep 'User:' | sed 's/.*User://;s/(.*//' | xargs || echo "dev")
+USER_EMAIL=$(zea thalamus whoami 2>/dev/null | grep 'User:' | grep -oE '[a-zA-Z0-9_.+-]+@[a-zA-Z0-9.-]+' || echo "usuario@zea.cl")
 check "Autenticado como: $USER_NAME"
 
 # ── 1. Crear organización ──────────────────────────────
@@ -70,7 +71,7 @@ ORG_NAME="mi-app-${SUFFIX}"
 
 zea thalamus org create \
   --name "$ORG_NAME" \
-  --email "$(zea thalamus whoami 2>/dev/null | grep -oP '[\w.+-]+@[\w.-]+')" \
+  --email "$USER_EMAIL" \
   --plan free 2>&1 | tail -1
 
 check "Organización '$ORG_NAME' creada"
@@ -96,8 +97,8 @@ CLIENT_OUTPUT=$(zea thalamus client create \
 
 check "OAuth2 client registrado"
 
-CLIENT_ID=$(echo "$CLIENT_OUTPUT" | grep -oP 'client_id[:\s]+\K[\w-]+' || echo "N/A")
-CLIENT_SECRET=$(echo "$CLIENT_OUTPUT" | grep -oP 'client_secret[:\s]+\K[\w-]+' || echo "N/A")
+CLIENT_ID=$(echo "$CLIENT_OUTPUT" | grep -oE 'client_[a-zA-Z0-9_-]+' | head -1 || echo "N/A")
+CLIENT_SECRET=$(echo "$CLIENT_OUTPUT" | grep 'CLIENT SECRET:' | sed 's/.*SECRET: //' || echo "N/A")
 
 echo ""
 echo -e "  ${BOLD}Guarda esto en tu .env:${NC}"
