@@ -7,7 +7,7 @@
 #
 # Uso:
 #   npm install -g @zea.cl/cli @zea.cl/thalamus @zea/soma-cli
-#   zea thalamus login      # (solo la primera vez)
+#   zea thalamus login --device   # (solo la primera vez)
 #   ./scripts/demo.sh
 # ============================================================================
 
@@ -53,7 +53,7 @@ if ! zea thalamus whoami &>/dev/null 2>&1; then
   echo ""
   echo -e "  ${YELLOW}Primero inicia sesión:${NC}"
   echo ""
-  echo "    zea thalamus login"
+  echo "    zea thalamus login --device"
   echo ""
   exit 0
 fi
