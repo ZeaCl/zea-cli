@@ -132,20 +132,17 @@ echo "  client_id: $CLIENT_ID"
 
 # ── 4. Secreto ────────────────────────────────────────
 
-step "4/7" "Configurar API key de IA"
+step "4/7" "Verificar API key de IA"
 
 DEEPSEEK_KEY=$(zea config get deepseek_key 2>/dev/null || zea config get deepseekKey 2>/dev/null || echo "")
 
 if [ -n "$DEEPSEEK_KEY" ]; then
-  echo "  Creando secreto deepseek desde config local..."
-  zea thalamus secret create \
-    --name "deepseek-demo" \
-    --provider deepseek \
-    --value "$DEEPSEEK_KEY" 2>/dev/null || echo "  (ya existe, continuando)"
-  check "DeepSeek API key configurada (desde ~/.config/zea)"
+  check "DeepSeek API key encontrada en ~/.config/zea/config.json"
 else
-  echo -e "  ${YELLOW}⚠️  DEEPSEEK_API_KEY no definida. Saltando...${NC}"
-  echo "     export DEEPSEEK_API_KEY=sk-... para habilitar el agente IA"
+  echo -e "  ${YELLOW}⚠️  No se encontró deepseek_key en config.${NC}"
+  echo "     El agente IA no estará disponible."
+  echo "     Configúrala con: zea config set deepseek_key sk-..."
+  exit 0
 fi
 
 # ── 5. Agente + Skill ─────────────────────────────────
