@@ -28,14 +28,28 @@ import { register as registerConfig } from './commands/config.js';
 registerConfig(program);
 
 // ── Dynamic PATH Discovery ──────────────────────────────
-// Scans PATH for zea-<service> binaries and mounts them as subcommands.
-// Built-in commands have zero knowledge of any service — everything is delegated.
+// Scans PATH and node_modules/.bin for zea-<service> binaries and mounts
+// them as subcommands. Built-in commands have zero knowledge of any service.
+
+function resolveBinDirs() {
+  const dirs = [];
+  // PATH directories
+  if (env.PATH) dirs.push(...env.PATH.split(path.delimiter));
+  // Global npm bin (sibling .bin of the CLI package)
+  const selfDir = path.dirname(path.dirname(new URL(import.meta.url).pathname));
+  dirs.push(path.join(selfDir, '.bin'));
+  // nvm-style global bin (e.g. ~/.nvm/versions/node/<ver>/bin)
+  if (process.execPath) {
+    dirs.push(path.dirname(process.execPath));
+  }
+  return dirs;
+}
 
 async function getDynamicCommands() {
-  const pathDirs = env.PATH ? env.PATH.split(path.delimiter) : [];
+  const searchDirs = resolveBinDirs();
   const zeaCommands = new Set();
 
-  for (const dir of pathDirs) {
+  for (const dir of searchDirs) {
     try {
       const files = await fs.readdir(dir);
       for (const file of files) {
