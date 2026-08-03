@@ -89,14 +89,14 @@ export function register(program) {
       try {
         const config = await load();
         if (envName === 'local') {
-          config.apiUrl = 'http://auth.zea.localhost';
-          config.cerebelumUrl = 'http://cerebelum.zea.localhost';
-          config.ventureUrl = 'http://venture.zea.localhost';
-          config.sduiUrl = 'http://sdui.zea.localhost';
-          config.appsUrl = 'http://apps.zea.localhost';
+          config.apiUrl = 'http://auth.zea.localhost:8080';
+          config.cerebelumUrl = 'http://cerebelum.zea.localhost:8080';
+          config.ventureUrl = 'http://venture.zea.localhost:8080';
+          config.sduiUrl = 'http://sdui.zea.localhost:8080';
+          config.appsUrl = 'http://apps.zea.localhost:8080';
           config.gliaUrl = 'http://localhost:4002';
           config.gliaWsUrl = 'ws://localhost:4002/socket/websocket';
-          config.sensorUrl = 'http://sensor.zea.localhost';
+          config.sensorUrl = 'http://sensor.zea.localhost:8080';
           console.log(chalk.green(`✅ Environment set to LOCAL`));
         } else if (envName === 'prod') {
           config.apiUrl = 'https://auth.zea.cl';
