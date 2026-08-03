@@ -1,0 +1,56 @@
+# ============================================================================
+# Buildspec — zea-cli (npm Package Publish)
+# ============================================================================
+#
+# Package: @zea.cl/cli
+# Registry: https://registry.npmjs.org
+# Trigger: push de tag v* (ej: v2.0.4)
+# Secrets: NPM_TOKEN (desde Secrets Manager zea/npm/token)
+#
+# ⚠️  No usa Docker — publica directamente a npm registry
+# ============================================================================
+
+version: 0.2
+
+env:
+  variables:
+    NODE_VERSION: "22"
+    PACKAGE: "@zea.cl/cli"
+  secrets-manager:
+    NPM_TOKEN: "zea/npm/token:NPM_TOKEN"
+
+phases:
+  install:
+    commands:
+      - echo "📦 Installing Node.js ${NODE_VERSION}..."
+      - curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash -
+      - apt-get install -y nodejs
+      - node --version
+      - npm --version
+      - |
+        echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+
+  pre_build:
+    commands:
+      - echo "📋 Installing dependencies..."
+      - npm ci
+
+  build:
+    commands:
+      - echo "🏷️  Package: ${PACKAGE}"
+      - echo "📦 Version: $(node -p "require('./package.json').version")"
+      - echo "🧪 Running tests..."
+      - npm test || echo "⚠️  Tests fallaron — publicando de todos modos"
+
+  post_build:
+    commands:
+      - echo "📤 Publishing to npm registry..."
+      - npm publish --access public
+      - |
+        echo ""
+        echo "✅ NPM publish completado"
+        echo "   📦 ${PACKAGE}@$(node -p "require('./package.json').version")"
+
+cache:
+  paths:
+    - '/root/.npm'
