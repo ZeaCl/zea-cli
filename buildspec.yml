@@ -3,32 +3,24 @@ version: 0.2
 env:
   variables:
     NODE_VERSION: "22"
-    PACKAGE: "@zea.cl/cli"
   secrets-manager:
     NPM_TOKEN: "zea/npm/token:NPM_TOKEN"
 
 phases:
   install:
     commands:
-      - echo "Installing Node.js ${NODE_VERSION}..."
-      - curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash -
-      - apt-get install -y nodejs
-      - node --version
-      - npm --version
-      - echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+      - "echo Installing Node.js"
+      - "curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash -"
+      - "apt-get install -y nodejs"
+      - "node --version"
+      - "npm --version"
+      - "echo //registry.npmjs.org/:_authToken=${NPM_TOKEN} > ~/.npmrc"
   pre_build:
     commands:
-      - npm ci
+      - "npm ci"
   build:
     commands:
-      - echo "Package: ${PACKAGE}"
-      - node -p "require('./package.json').version"
-      - npm test || echo "Tests failed, continuing anyway"
+      - "npm test || echo Tests failed"
   post_build:
     commands:
-      - npm publish --access public
-      - echo "Published ${PACKAGE}"
-
-cache:
-  paths:
-    - '/root/.npm'
+      - "npm publish --access public"
