@@ -17,7 +17,7 @@ phases:
       - ". ~/.nvm/nvm.sh && echo //registry.npmjs.org/:_authToken=${NPM_TOKEN} > ~/.npmrc"
   pre_build:
     commands:
-      - ". ~/.nvm/nvm.sh && npm ci"
+      - ". ~/.nvm/nvm.sh && (npm ci 2>/dev/null || npm install)"
   build:
     commands:
       - ". ~/.nvm/nvm.sh && npm test || echo Tests failed, continuing"
